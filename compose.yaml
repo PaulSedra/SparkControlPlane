@@ -1,0 +1,72 @@
+name: spark-control-plane
+
+services:
+  control-plane:
+    build:
+      context: .
+      args:
+        APP_VERSION: 0.1.0
+        NODE_IMAGE: node:24.19.0-bookworm-slim
+        PYTHON_IMAGE: python:3.10.12-slim-bookworm
+        PYSPARK_VERSION: 4.2.0
+    image: ${SPARK_CONTROL_PLANE_IMAGE:-spark-control-plane:local}
+    environment:
+      CONTROL_PLANE_HOST: 0.0.0.0
+      CONTROL_PLANE_PORT: ${CONTROL_PLANE_PORT:-8080}
+      CONTROL_PLANE_DRAIN_SECONDS: ${CONTROL_PLANE_DRAIN_SECONDS:-30}
+      AISTOR_WEBHOOK_TOKEN: ${AISTOR_WEBHOOK_TOKEN:?Set AISTOR_WEBHOOK_TOKEN in the caller environment}
+      PIPELINES_DIR: /app/pipelines
+      PIPELINE_RUN_LEASE_SECONDS: ${PIPELINE_RUN_LEASE_SECONDS:-30}
+      PIPELINE_RUN_RECOVERY_INTERVAL_SECONDS: ${PIPELINE_RUN_RECOVERY_INTERVAL_SECONDS:-}
+      PIPELINE_RUN_RECOVERY_BATCH_SIZE: ${PIPELINE_RUN_RECOVERY_BATCH_SIZE:-100}
+      PIPELINE_RUN_POLICIES: ${PIPELINE_RUN_POLICIES:-}
+      PYTHON_EXECUTABLE: ${PYTHON_EXECUTABLE:-/usr/local/bin/python}
+      PYSPARK_PYTHON: /usr/local/bin/python
+      PYSPARK_DRIVER_PYTHON: /usr/local/bin/python
+      POSTGRES_HOST: ${POSTGRES_HOST:?Set POSTGRES_HOST in the caller environment}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE:?Set POSTGRES_DATABASE in the caller environment}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in the caller environment}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the caller environment}
+      POSTGRES_SSLMODE: ${POSTGRES_SSLMODE:-require}
+      POSTGRES_SSLROOTCERT: ${POSTGRES_SSLROOTCERT:-}
+      POSTGRES_SSLCERT: ${POSTGRES_SSLCERT:-}
+      POSTGRES_SSLKEY: ${POSTGRES_SSLKEY:-}
+      POSTGRES_SCHEMA: ${POSTGRES_SCHEMA:-public}
+      POLARIS_REALM: ${POLARIS_REALM:-POLARIS}
+      POLARIS_POSTGRES_HOST: ${POLARIS_POSTGRES_HOST:-}
+      POLARIS_POSTGRES_PORT: ${POLARIS_POSTGRES_PORT:-}
+      POLARIS_POSTGRES_DATABASE: ${POLARIS_POSTGRES_DATABASE:-}
+      POLARIS_POSTGRES_USER: ${POLARIS_POSTGRES_USER:-}
+      POLARIS_POSTGRES_PASSWORD: ${POLARIS_POSTGRES_PASSWORD:-}
+      POLARIS_POSTGRES_SSLMODE: ${POLARIS_POSTGRES_SSLMODE:-}
+      POLARIS_POSTGRES_SSLROOTCERT: ${POLARIS_POSTGRES_SSLROOTCERT:-}
+      POLARIS_POSTGRES_SSLCERT: ${POLARIS_POSTGRES_SSLCERT:-}
+      POLARIS_POSTGRES_SSLKEY: ${POLARIS_POSTGRES_SSLKEY:-}
+      POLARIS_POSTGRES_SCHEMA: ${POLARIS_POSTGRES_SCHEMA:-polaris_schema}
+      SPARK_CONNECT_URL: ${SPARK_CONNECT_URL:?Set SPARK_CONNECT_URL in the caller environment}
+      SPARK_HISTORY_URL: ${SPARK_HISTORY_URL:-}
+      SPARK_CLI_BINARY: ${SPARK_CLI_BINARY:-spark-pipelines}
+      SPARK_CLI_PYTHON: ${SPARK_CLI_PYTHON:-/usr/local/bin/python}
+      SPARK_CLI_PROPERTIES_FILE: ${SPARK_CLI_PROPERTIES_FILE:-}
+      SPARK_CLI_STATE_DIRECTORY: ${SPARK_CLI_STATE_DIRECTORY:-/app/run-state}
+    ports:
+      # Host port -> container listen port. These may be different when the host port is occupied.
+      - "${CONTROL_PLANE_HOST_PORT:-8080}:${CONTROL_PLANE_PORT:-8080}"
+    volumes:
+      - type: bind
+        source: ${PIPELINES_HOST_PATH:?Set PIPELINES_HOST_PATH to the mounted pipeline root}
+        target: /app/pipelines
+        read_only: true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "docker/control-plane-healthcheck.mjs"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"

@@ -1,0 +1,79 @@
+:root[data-theme='light'] .catalog-app-shell .catalog-search {
+  border-color: var(--application-shell-border);
+  background: #ffffff;
+}
+
+:root[data-theme='light'] .catalog-app-shell .catalog-column-filter {
+  border-color: var(--application-shell-border);
+  background: #ffffff;
+}
+
+:root[data-theme='light'] .catalog-app-shell .catalog-browser {
+  background: #ffffff;
+}
+
+:root[data-theme='light'] .catalog-app-shell .catalog-about {
+  background: #ffffff;
+}
+
+:root[data-theme='light'] .catalog-app-shell .catalog-tree-root-label {
+  color: #344454;
+}
+
+:root[data-theme='light'] .catalog-app-shell .catalog-tree-item {
+  color: #344454;
+}
+
+:root[data-theme='light'] .catalog-app-shell .catalog-tree-node {
+  color: #344454;
+}
+
+:root[data-theme='light'] .catalog-app-shell .catalog-tree-group-label {
+  color: #607086;
+}
+
+:root[data-theme='light'] .catalog-app-shell .catalog-tree-item small {
+  color: #607086;
+}
+
+:root[data-theme='light'] .catalog-app-shell .catalog-tree-branch {
+  border-color: var(--application-shell-border);
+}
+
+:root[data-theme='light'] .catalog-app-shell .catalog-tree-children {
+  border-color: var(--application-shell-border);
+}
+
+:root[data-theme='light'] .catalog-app-shell .catalog-tree-row.selected {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+:root[data-theme='light'] .catalog-app-shell .catalog-tree-node.selected {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+:root[data-theme='light'] .catalog-app-shell .catalog-definition {
+  background: #f3f6fa;
+}
+
+:root[data-theme='light'] .catalog-app-shell .catalog-title-icon {
+  background: #f3f6fa;
+}
+
+:root[data-theme='light'] .catalog-app-shell .catalog-tag {
+  background: #f3f6fa;
+}
+
+:root[data-theme='light'] .catalog-app-shell .catalog-definition pre {
+  color: #344454;
+}
+
+:root[data-theme='light'] .catalog-app-shell .catalog-column-table th {
+  background: #f3f6fa;
+}
+
+:root[data-theme='light'] .catalog-app-shell .catalog-sample-table th {
+  background: #f3f6fa;
+}

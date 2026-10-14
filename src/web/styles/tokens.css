@@ -1,0 +1,60 @@
+:root {
+  color-scheme: dark;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  font-synthesis: none;
+  line-height: 1.45;
+  text-rendering: optimizeLegibility;
+  --bg: #262626;
+  --panel: #262626;
+  --panel-soft: #262626;
+  --nav: #2e2e2e;
+  --pipeline-graph-background: #2e2e2e;
+  --pipeline-graph-dot: #262626;
+  --text: #ffffff;
+  --muted: #8ca0ad;
+  --line: #2e2e2e;
+  --accent: #e25a1c;
+  --accent-soft: #5a2818;
+  --application-shell-border-width: 1px;
+  --success: #36c86a;
+  --success-soft: #12351f;
+  --warning: #e0a43d;
+  --warning-soft: #3b2d15;
+  --danger: #ef6470;
+  --danger-soft: #3e1e25;
+  --status-icon-succeeded-color: var(--success);
+  --status-icon-running-color: var(--warning);
+  --status-icon-failed-color: var(--danger);
+  --status-icon-canceled-color: var(--muted);
+  --status-icon-unknown-color: var(--muted);
+  --shadow: 0 12px 34px rgba(0, 0, 0, 0.28);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f7f9fb;
+  --panel: #ffffff;
+  --panel-soft: #f3f6fa;
+  --nav: #eef2f5;
+  --pipeline-graph-background: var(--nav);
+  --pipeline-graph-dot: #ffffff;
+  --text: #3c3a3e;
+  --muted: #607086;
+  --line: #d8e0ea;
+  --accent: #e25a1c;
+  --accent-soft: #f5e1d6;
+  --success: #1f8f4d;
+  --success-soft: #e8f7ee;
+  --warning: #a96500;
+  --warning-soft: #fff4dd;
+  --danger: #c0352b;
+  --danger-soft: #fde8e6;
+  --status-icon-succeeded-color: var(--success);
+  --status-icon-running-color: var(--warning);
+  --status-icon-failed-color: var(--danger);
+  --status-icon-canceled-color: var(--muted);
+  --status-icon-unknown-color: var(--muted);
+  --shadow: 0 12px 34px rgba(31, 41, 55, 0.08);
+}

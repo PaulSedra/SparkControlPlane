@@ -1,0 +1,48 @@
+{
+  "expectedRoutes": {
+    "/docs": ["get"],
+    "/openapi.json": ["get"],
+    "/health": ["get"],
+    "/ready": ["get"],
+    "/metrics": ["get"],
+    "/api/v1/catalogs": ["get"],
+    "/api/v1/catalogs/{catalog}/schemas": ["get"],
+    "/api/v1/catalogs/{catalog}/schemas/{schema}/tables": ["get"],
+    "/api/v1/catalogs/{catalog}/schemas/{schema}/tables/{table}": ["get"],
+    "/api/v1/catalogs/{catalog}/schemas/{schema}/tables/{table}/data": ["get"],
+    "/api/v1/pipelines": ["get"],
+    "/api/v1/pipelines/refresh-from-source": ["post"],
+    "/api/v1/pipelines/{pipelineId}": ["get"],
+    "/api/v1/pipelines/{pipelineId}/deploy": ["post"],
+    "/api/v1/pipelines/{pipelineId}/runs": ["get", "post"],
+    "/api/v1/history/export": ["get"],
+    "/api/v1/triggers": ["get", "post"],
+    "/api/v1/triggers/events": ["get", "post"],
+    "/api/v1/triggers/routing-decisions": ["get"],
+    "/api/v1/triggers/delivery-attempts": ["get"],
+    "/api/v1/triggers/dead-letters": ["get"],
+    "/api/v1/triggers/dead-letters/{deadLetterId}/replay": ["post"],
+    "/api/v1/triggers/dead-letters/{deadLetterId}/discard": ["post"],
+    "/api/v1/triggers/aistor/events": ["post"],
+    "/api/v1/triggers/{triggerId}": ["get", "patch"],
+    "/api/v1/triggers/{triggerId}/schedule": ["get"],
+    "/api/v1/runs/{runId}": ["get"],
+    "/api/v1/runs/{runId}/status": ["get"],
+    "/api/v1/runs/{runId}/events": ["get"],
+    "/api/v1/runs/{runId}/cancel": ["post"],
+    "/api/v1/pipelines/{pipelineId}/nodes/{nodeId}/data": ["get"],
+    "/api/v1/pipelines/{pipelineId}/source": ["get"]
+  },
+  "pathCount": 32,
+  "aistorSecurity": [
+    {
+      "AistorBearer": []
+    }
+  ],
+  "proxy": {
+    "canonical": false,
+    "enabledBy": "SPARK_HISTORY_URL",
+    "pathPrefix": "/spark-api",
+    "purpose": "Optional read-only Spark History Server monitoring proxy; not a control-plane API route."
+  }
+}

@@ -1,0 +1,44 @@
+parseCases:
+  - name: parses schedule and trigger entries
+    fixture: yaml/orders-triggers.pipeline.yaml
+    specPath: resources/orders.pipeline.yaml
+    expected:
+      - type: SCHEDULE
+        configuration:
+          cron: "0 2 * * *"
+          misfirePolicy: CATCH_UP_ONCE
+          timeZone: America/New_York
+      - type: FILE_ARRIVAL
+        enabled: false
+        configuration:
+          bucket: lake
+          debounceMilliseconds: 12000
+          eventNames:
+            - s3:ObjectCreated:Put
+          prefix: incoming/orders/
+      - type: WEBHOOK
+        configuration:
+          attributes:
+            tenant: north
+          debounceMilliseconds: null
+          eventType: order.created
+          source: warehouse
+  - name: parses a file-arrival URL list into one debounce group
+    fixture: yaml/multi-location.pipeline.yaml
+    specPath: resources/multi-location.pipeline.yaml
+    expected:
+      - type: FILE_ARRIVAL
+        configuration:
+          debounceMilliseconds: 60000
+          eventNames:
+            - s3:ObjectCreated:Put
+          locations:
+            - bucket: lake
+              prefix: incoming/orders/
+            - bucket: archive
+              prefix: incoming/customers/
+rejectCases:
+  - name: rejects unsupported trigger fields and Quartz cron expressions
+    fixture: yaml/unsupported-quartz.pipeline.yaml
+    specPath: resources/orders.pipeline.yaml
+    errorIncludes: "Invalid trigger YAML.*quartz_cron_expression is not supported"

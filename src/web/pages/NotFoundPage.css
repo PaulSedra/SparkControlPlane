@@ -1,0 +1,22 @@
+.not-found-page {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: var(--bg);
+}
+
+.not-found-page > div {
+  display: grid;
+  gap: 12px;
+  width: min(100%, 420px);
+}
+
+.not-found-page h1,
+.not-found-page p {
+  margin: 0;
+}
+
+.not-found-page p {
+  color: var(--muted);
+}

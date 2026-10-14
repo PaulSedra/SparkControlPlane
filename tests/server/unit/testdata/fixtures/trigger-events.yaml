@@ -1,0 +1,213 @@
+generic:
+  trigger:
+    configuration:
+      attributes:
+        tenant: north
+      eventType: job.completed
+      source: warehouse
+    name: warehouse-complete
+  event:
+    attributes:
+      tenant: north
+    deduplicationKey: warehouse:event-1
+    eventId: event-1
+    eventType: job.completed
+    occurredAt: "2026-09-08T12:00:00.000Z"
+    payload:
+      jobId: job-1
+    source: warehouse
+  duplicateEventId: event-retry
+  expectedSubmissionEventId: event-1
+
+debounce:
+  - name: file-arrival events debounce a burst to the latest event per trigger
+    trigger:
+      configuration:
+        bucket: lake
+        debounceMilliseconds: 60000
+        prefix: incoming/
+      name: incoming-files
+    assertDebounceDecision: true
+    events:
+      - attributes:
+          bucket: lake
+          eventName: s3:ObjectCreated:Put
+          objectKey: incoming/one.json
+        deduplicationKey: aistor:lake:incoming/one.json
+        eventId: file-1
+        eventType: file.arrived
+        occurredAt: "2026-09-08T12:00:00.000Z"
+        payload:
+          bucket: lake
+          objectKey: incoming/one.json
+        source: aistor
+      - attributes:
+          bucket: lake
+          eventName: s3:ObjectCreated:Put
+          objectKey: incoming/two.json
+        deduplicationKey: aistor:lake:incoming/two.json
+        eventId: file-2
+        eventType: file.arrived
+        occurredAt: "2026-09-08T12:00:00.000Z"
+        payload:
+          bucket: lake
+          objectKey: incoming/two.json
+        source: aistor
+  - name: file-arrival URL lists share one debounce group across buckets
+    trigger:
+      configuration:
+        debounceMilliseconds: 60000
+        eventNames:
+          - s3:ObjectCreated:Put
+        locations:
+          - bucket: lake
+            prefix: incoming/orders/
+          - bucket: archive
+            prefix: incoming/customers/
+      name: landing-files
+    events:
+      - attributes:
+          bucket: lake
+          eventName: s3:ObjectCreated:Put
+          objectKey: incoming/orders/one.json
+        deduplicationKey: aistor:lake:incoming/orders/one.json
+        eventId: file-1
+        eventType: file.arrived
+        occurredAt: "2026-09-08T12:00:00.000Z"
+        payload:
+          bucket: lake
+          objectKey: incoming/orders/one.json
+        source: aistor
+      - attributes:
+          bucket: archive
+          eventName: s3:ObjectCreated:Put
+          objectKey: incoming/customers/two.json
+        deduplicationKey: aistor:archive:incoming/customers/two.json
+        eventId: file-2
+        eventType: file.arrived
+        occurredAt: "2026-09-08T12:00:00.000Z"
+        payload:
+          bucket: archive
+          objectKey: incoming/customers/two.json
+        source: aistor
+
+independentFileArrival:
+  triggers:
+    - configuration:
+        bucket: lake
+        debounceMilliseconds: 60000
+        prefix: incoming/orders/
+      name: orders-files
+    - configuration:
+        bucket: lake
+        debounceMilliseconds: 60000
+        prefix: incoming/customers/
+      name: customer-files
+  events:
+    - attributes:
+        bucket: lake
+        eventName: s3:ObjectCreated:Put
+        objectKey: incoming/orders/one.json
+      deduplicationKey: aistor:lake:incoming/orders/one.json
+      eventId: orders-file
+      eventType: file.arrived
+      occurredAt: "2026-09-08T12:00:00.000Z"
+      payload:
+        bucket: lake
+        objectKey: incoming/orders/one.json
+      source: aistor
+    - attributes:
+        bucket: lake
+        eventName: s3:ObjectCreated:Put
+        objectKey: incoming/customers/two.json
+      deduplicationKey: aistor:lake:incoming/customers/two.json
+      eventId: customer-file
+      eventType: file.arrived
+      occurredAt: "2026-09-08T12:00:00.000Z"
+      payload:
+        bucket: lake
+        objectKey: incoming/customers/two.json
+      source: aistor
+
+aistorRouting:
+  trigger:
+    configuration:
+      bucket: lake
+      debounceMilliseconds: 0
+      prefix: incoming/
+    name: incoming-files
+  notification:
+    Records:
+      - eventName: s3:ObjectCreated:Put
+        s3:
+          bucket:
+            name: lake
+          object:
+            eTag: etag-1
+            key: incoming%2Forders.json
+
+failedDelivery:
+  trigger:
+    configuration:
+      eventType: job.failed
+      source: warehouse
+    name: failed-job-recovery
+  event:
+    attributes: {}
+    deduplicationKey: warehouse:job-1
+    eventId: warehouse-failed-1
+    eventType: job.failed
+    occurredAt: "2026-09-08T12:00:00.000Z"
+    payload:
+      jobId: job-1
+    source: warehouse
+
+discardDelivery:
+  trigger:
+    configuration:
+      eventType: job.failed
+      source: warehouse
+    name: discard-job-recovery
+  event:
+    attributes: {}
+    deduplicationKey: warehouse:job-2
+    eventId: warehouse-failed-2
+    eventType: job.failed
+    occurredAt: "2026-09-08T12:00:00.000Z"
+    payload:
+      jobId: job-2
+    source: warehouse
+
+routing:
+  triggers:
+    - configuration:
+        eventType: job.completed
+        source: warehouse
+      name: warehouse-complete-one
+      pipelineId: pipeline-1
+    - configuration:
+        eventType: job.completed
+        source: warehouse
+      name: warehouse-complete-two
+      pipelineId: pipeline-2
+    - configuration:
+        eventType: job.failed
+        source: warehouse
+      name: warehouse-failed
+      pipelineId: pipeline-3
+  multiMatch:
+    attributes: {}
+    deduplicationKey: warehouse:completed-1
+    eventId: warehouse-completed-1
+    eventType: job.completed
+    occurredAt: "2026-09-08T12:00:00.000Z"
+    payload: {}
+    source: warehouse
+  noMatch:
+    attributes: {}
+    deduplicationKey: warehouse:started-1
+    eventId: warehouse-started-1
+    eventType: job.started
+    occurredAt: "2026-09-08T12:00:01.000Z"
+    payload: {}
+    source: warehouse

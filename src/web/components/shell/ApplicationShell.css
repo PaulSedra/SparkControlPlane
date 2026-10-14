@@ -1,0 +1,525 @@
+.db-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.db-route-shell {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+
+.db-route-content {
+  min-width: 0;
+  min-height: 0;
+  background: var(--panel);
+}
+
+.db-side-bar {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 8px;
+  border-right: 1px solid var(--line);
+  background: var(--panel-soft);
+}
+
+.db-side-bar-caption {
+  padding: 0 8px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.db-side-bar-list {
+  display: grid;
+  gap: 4px;
+}
+
+.db-side-bar-list a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 7px 8px;
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.db-side-bar-list a:hover {
+  background: var(--panel);
+}
+
+.db-side-bar-list a.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.db-top-bar {
+  width: 100%;
+}
+
+.db-top-bar {
+  display: grid;
+  grid-template-columns: 240px 1fr auto;
+  align-items: center;
+  gap: 18px;
+  height: 54px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+
+/* Dark pipeline workspace treatment based on the supplied graph-page reference. */
+.application-shell {
+  --application-content-radius: 6px;
+  --application-shell-gutter: 6px;
+  --application-top-bar-height: 44px;
+  --application-shell-border-width: 2px;
+  --application-shell-border: var(--nav);
+  color-scheme: dark;
+  min-height: 100vh;
+  padding: var(--application-shell-gutter);
+  background: var(--nav);
+  color: var(--text);
+}
+
+.application-shell .db-top-bar {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 560px) minmax(0, 1fr);
+  height: var(--application-top-bar-height);
+  gap: 14px;
+  padding: 0 10px;
+  border-bottom: 0;
+  background: var(--nav);
+}
+
+.application-shell .brand-lockup {
+  gap: 7px;
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
+.application-shell .application-brand-logo {
+  display: block;
+  height: 26px;
+  width: auto;
+  object-fit: contain;
+}
+
+.application-shell .application-brand-name {
+  font-size: 1rem;
+  font-style: italic;
+  transform: translateY(5px);
+}
+
+.application-shell .application-brand-logo--light {
+  display: none;
+}
+
+:root[data-theme='light'] .application-shell .application-brand-logo--dark {
+  display: none;
+}
+
+:root[data-theme='light'] .application-shell .application-brand-logo--light {
+  display: block;
+}
+
+.application-shell .sidebar-toggle {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.application-shell .sidebar-toggle .app-icon {
+  color: var(--muted);
+}
+
+.application-shell .sidebar-toggle:hover,
+.application-shell .sidebar-toggle:focus-visible {
+  background: #6b6870;
+  color: var(--text);
+}
+
+.application-shell .sidebar-toggle:hover .app-icon,
+.application-shell .sidebar-toggle:focus-visible .app-icon {
+  color: var(--text);
+}
+
+.application-shell .sidebar-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.application-shell .brand-lockup svg {
+  color: var(--accent);
+}
+
+.global-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 27px;
+  padding: 0 9px;
+  border: var(--application-shell-border-width) solid var(--application-shell-border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: #7f95a4;
+}
+
+.global-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.72rem;
+}
+
+.global-search input::placeholder {
+  color: #7f95a4;
+}
+
+.global-search kbd {
+  color: #7892a4;
+  font-size: 0.62rem;
+  white-space: nowrap;
+}
+
+.application-shell .global-actions {
+  gap: 11px;
+  justify-self: end;
+}
+
+.global-workspace-name {
+  color: var(--text);
+  font-size: 0.72rem;
+}
+
+.global-icon-button,
+.pipeline-header-icon,
+.bottom-panel-actions button,
+.pipeline-output-actions button,
+.detail-copy-button {
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.global-icon-button {
+  width: 22px;
+  height: 22px;
+}
+
+.global-icon-button:hover,
+.pipeline-header-icon:hover,
+.bottom-panel-actions button:hover,
+.pipeline-output-actions button:hover,
+.detail-copy-button:hover {
+  color: var(--text);
+}
+
+.pipeline-output-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.global-avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--panel-soft);
+  color: var(--muted);
+}
+
+.global-avatar .app-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.application-top-bar {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 560px) minmax(0, 1fr);
+}
+
+.global-theme-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.application-shell .global-theme-toggle {
+  color: var(--muted);
+}
+
+.global-theme-toggle:hover {
+  color: var(--text);
+}
+
+.application-shell .global-theme-toggle:hover {
+  color: var(--text);
+}
+
+.application-shell .db-route-shell {
+  grid-template-columns: 180px minmax(0, 1fr);
+  height: calc(100vh - var(--application-top-bar-height) - var(--application-shell-gutter) - var(--application-shell-gutter));
+  background: var(--nav);
+}
+
+.application-shell.sidebar-collapsed .db-route-shell {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+
+.application-shell.sidebar-collapsed .db-side-bar {
+  min-width: 0;
+  padding: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.application-shell .db-route-content {
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--application-content-radius);
+  background: var(--bg);
+}
+
+.workspace-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  width: fit-content;
+  color: var(--accent);
+  font-size: 0.68rem;
+  text-decoration: none;
+}
+
+.workspace-back-link:hover {
+  color: var(--text);
+}
+
+.application-shell .db-side-bar {
+  display: block;
+  min-height: 0;
+  padding: 8px 5px 8px 6px;
+  overflow: hidden;
+  border-right: 0;
+  background: var(--nav);
+  color: var(--text);
+}
+
+.db-side-bar-create {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid #493640;
+  border-radius: 4px;
+  background: #3a2832;
+  color: #f5dbe4;
+  text-align: left;
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.db-side-bar-create:hover {
+  background: #4c303d;
+}
+
+.db-side-bar-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-color: #40515a transparent;
+  scrollbar-width: thin;
+}
+
+.db-side-bar-section {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 10px;
+}
+
+.application-shell .db-side-bar-caption {
+  padding: 5px 9px 3px;
+  color: #91a3af;
+  font-size: 0.65rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.db-side-bar-list {
+  display: grid;
+  gap: 1px;
+}
+
+.db-side-bar-link {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 27px;
+  padding: 5px 8px;
+  border-radius: 3px;
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 550;
+  text-decoration: none;
+}
+
+.db-side-bar-link:hover {
+  background: #6b6870;
+  color: #f0f5f7;
+}
+
+.db-side-bar-link.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 750;
+}
+
+.db-side-bar-link.disabled {
+  cursor: default;
+  opacity: 0.94;
+}
+
+@media (max-width: 1100px) {
+  .db-top-bar {
+    grid-template-columns: 1fr;
+    height: auto;
+    padding-block: 10px;
+  }
+
+  .global-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .connection-drawer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .connection-drawer {
+    display: flex;
+  }
+
+  .db-route-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .db-side-bar {
+    display: flex;
+    align-items: center;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 6px 12px;
+  }
+
+  .db-side-bar-caption {
+    display: none;
+  }
+
+  .db-side-bar-list {
+    display: flex;
+    min-width: 0;
+    overflow-x: auto;
+  }
+  .application-shell > .db-route-shell {
+    grid-template-columns: 180px minmax(0, 1fr);
+  }
+
+  .application-shell .db-side-bar {
+    display: grid;
+    align-content: start;
+    border-right: 1px solid var(--line);
+    border-bottom: 0;
+    padding: 10px 8px;
+  }
+
+  .application-shell .db-side-bar-caption {
+    display: block;
+  }
+
+  .application-shell .db-side-bar-list {
+    display: grid;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 900px) {
+  .application-shell .db-top-bar {
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 1fr) minmax(0, 1fr);
+  }
+
+  .application-shell .global-workspace-name {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .application-shell .db-top-bar {
+    grid-template-columns: 1fr;
+    height: auto;
+    gap: 10px;
+    padding-block: 10px;
+  }
+
+  .application-shell .global-search {
+    width: 100%;
+  }
+
+  .application-shell .global-actions {
+    justify-self: end;
+  }
+
+  .application-shell.sidebar-collapsed .db-route-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .application-shell.sidebar-collapsed .db-side-bar {
+    display: none;
+  }
+
+  .application-shell .db-route-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: calc(100vh - var(--application-top-bar-height) - var(--application-shell-gutter) - var(--application-shell-gutter));
+  }
+
+  .application-shell .db-side-bar {
+    max-height: 250px;
+  }
+}
+
+@media (max-width: 700px) {
+  .db-top-bar {
+    padding-inline: 12px;
+  }
+}

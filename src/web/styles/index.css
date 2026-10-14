@@ -1,0 +1,38 @@
+/*
+ * Global style entry point. Feature and component rules live beside their
+ * owners below; keep this order explicit because the current class contract
+ * still shares one global cascade.
+ */
+@import "./tokens.css";
+@import "./base.css";
+@import "./core/primitives.css";
+
+@import "../components/shell/ApplicationShell.css";
+@import "../pages/PipelinePage.css";
+@import "../components/pipeline/graph/PipelineGraph.css";
+@import "../components/jobs-and-pipelines/JobsAndPipelines.css";
+@import "../components/pipeline/PipelineControls.css";
+@import "../components/pipeline/graph/PipelineGraphReference.css";
+@import "../components/pipeline/graph/PipelineFeedback.css";
+@import "../components/workspace/PipelineWorkspaceView.css";
+@import "../components/pipeline/runs/PipelineRuns.css";
+@import "../components/pipeline/PipelineDetailsRail.css";
+@import "../components/pipeline/triggers/PipelineTriggers.css";
+@import "../components/pipeline/bottom-panel/PipelineTables.css";
+@import "../pages/WorkspacePage.css";
+@import "../pages/NotFoundPage.css";
+@import "../components/ui/EmptyState.css";
+
+@import "./themes.css";
+@import "../components/jobs-and-pipelines/JobsAndPipelinesTheme.css";
+
+@import "../components/catalog/CatalogShared.css";
+@import "../pages/CatalogPage.css";
+@import "../components/catalog/CatalogBrowser.css";
+@import "../components/catalog/CatalogHeader.css";
+@import "../components/catalog/CatalogFeedback.css";
+@import "../components/catalog/CatalogAssetDetail.css";
+@import "../components/catalog/CatalogAssetAbout.css";
+@import "../components/catalog/CatalogTheme.css";
+@import "../components/ui/StatusIcon.css";
+@import "../components/ui/DataAssetIcon.css";

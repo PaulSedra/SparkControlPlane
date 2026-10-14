@@ -1,0 +1,24 @@
+{
+  "Records": [
+    {
+      "awsRegion": "us-east-1",
+      "eventName": "s3:ObjectCreated:CompleteMultipartUpload",
+      "eventSource": "minio:s3",
+      "eventTime": "2026-09-08T11:56:00.000Z",
+      "s3": {
+        "bucket": {
+          "arn": "arn:aws:s3:::lake",
+          "name": "lake"
+        },
+        "object": {
+          "contentType": "application/octet-stream",
+          "eTag": "etag-multipart",
+          "key": "archive%2Forders%2F2026.json",
+          "sequencer": "0055A1",
+          "size": 4096,
+          "versionId": "version-42"
+        }
+      }
+    }
+  ]
+}

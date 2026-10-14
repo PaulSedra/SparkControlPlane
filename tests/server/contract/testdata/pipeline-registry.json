@@ -1,0 +1,139 @@
+{
+  "triggers": {
+    "schedule": {
+      "configuration": {
+        "cron": "0 0 * * *",
+        "timeZone": "UTC"
+      },
+      "enabled": false,
+      "mode": "incremental",
+      "name": "nightly-test-trigger",
+      "type": "SCHEDULE"
+    },
+    "webhook": {
+      "configuration": {
+        "attributes": {
+          "tenant": "north"
+        },
+        "eventType": "job.completed",
+        "source": "warehouse"
+      },
+      "mode": "incremental",
+      "name": "warehouse-webhook-trigger",
+      "type": "WEBHOOK"
+    },
+    "fileArrival": {
+      "configuration": {
+        "bucket": "lake",
+        "debounceMilliseconds": 0,
+        "prefix": "incoming/"
+      },
+      "mode": "incremental",
+      "name": "aistor-file-trigger",
+      "type": "FILE_ARRIVAL"
+    },
+    "failed": {
+      "configuration": {
+        "eventType": "delivery.failed",
+        "source": "dead-letter-test"
+      },
+      "mode": "incremental",
+      "name": "dead-letter-test-trigger",
+      "pipelineId": "missing-pipeline",
+      "type": "WEBHOOK"
+    }
+  },
+  "events": {
+    "canonical": {
+      "attributes": {
+        "tenant": "north"
+      },
+      "deduplicationKey": "warehouse:job-1",
+      "eventId": "warehouse-event-1",
+      "eventType": "job.completed",
+      "occurredAt": "2026-09-08T12:00:00.000Z",
+      "payload": {
+        "jobId": "job-1"
+      },
+      "source": "warehouse"
+    },
+    "canonicalDuplicate": {
+      "attributes": {
+        "tenant": "north"
+      },
+      "deduplicationKey": "warehouse:job-1",
+      "eventId": "warehouse-event-retry",
+      "eventType": "job.completed",
+      "occurredAt": "2026-09-08T12:00:00.000Z",
+      "payload": {
+        "jobId": "job-1"
+      },
+      "source": "warehouse"
+    },
+    "failed": {
+      "attributes": {},
+      "deduplicationKey": "dead-letter-test:first",
+      "eventId": "dead-letter-test-event-1",
+      "eventType": "delivery.failed",
+      "occurredAt": "2026-09-08T12:00:00.000Z",
+      "payload": {
+        "requestId": "request-1"
+      },
+      "source": "dead-letter-test"
+    },
+    "failedSecond": {
+      "attributes": {},
+      "deduplicationKey": "dead-letter-test:second",
+      "eventId": "dead-letter-test-event-2",
+      "eventType": "delivery.failed",
+      "occurredAt": "2026-09-08T12:00:00.000Z",
+      "payload": {
+        "requestId": "request-2"
+      },
+      "source": "dead-letter-test"
+    }
+  },
+  "patches": {
+    "enable": {
+      "enabled": true
+    },
+    "disable": {
+      "enabled": false
+    },
+    "repair": {
+      "pipelineId": "__PIPELINE_ID__"
+    },
+    "break": {
+      "pipelineId": "missing-pipeline"
+    }
+  },
+  "runBodies": {
+    "selectedRefresh": {
+      "mode": "refresh-selected"
+    },
+    "dryRun": {
+      "mode": "dry-run"
+    },
+    "default": {
+      "mode": "incremental"
+    }
+  },
+  "errors": {
+    "unauthorizedAistor": {
+      "code": "UNAUTHORIZED",
+      "message": "Valid AIStor authorization is required."
+    },
+    "noSparkConnect": {
+      "code": "INTERNAL_ERROR",
+      "message": "No Spark Connect target is configured for data samples."
+    },
+    "idempotencyConflict": {
+      "code": "CONFLICT",
+      "message": "The idempotency key was already used for a different pipeline run request."
+    },
+    "invalidMode": {
+      "code": "INVALID_REQUEST",
+      "message": "Unsupported pipeline run mode: unknown"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+ALTER TABLE runs
+    DROP CONSTRAINT IF EXISTS runs_status_check;
+
+ALTER TABLE runs
+    ADD CONSTRAINT runs_status_check
+    CHECK (status IN ('QUEUED', 'SUBMITTING', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELED', 'TIMED_OUT'));

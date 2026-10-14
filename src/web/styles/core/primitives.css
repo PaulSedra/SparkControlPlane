@@ -1,0 +1,132 @@
+.brand-lockup,
+.global-actions,
+.pipeline-actions,
+.secondary-button,
+.primary-button,
+.compact-toggle,
+.side-tabs,
+.asset-list button,
+.last-run-line,
+.canvas-toolbar,
+.toolbar-actions,
+.bottom-tabs,
+.node-meta,
+.node-title,
+.node-footer {
+  display: flex;
+  align-items: center;
+}
+
+.brand-lockup {
+  gap: 9px;
+  font-size: 1rem;
+}
+
+.brand-lockup svg {
+  color: var(--accent);
+}
+
+.global-actions {
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.global-spacer {
+  min-width: 0;
+}
+
+.connection-drawer {
+  display: grid;
+  grid-template-columns: minmax(280px, 560px) auto;
+  align-items: end;
+  gap: 10px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfcfe;
+}
+
+.connection-drawer input {
+  min-height: 34px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.source-label,
+.pipeline-actions,
+.compact-toggle,
+.muted-text {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.secondary-button,
+.primary-button {
+  gap: 7px;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 650;
+}
+
+.primary-button {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.empty-state {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  min-height: 240px;
+  padding: 36px 24px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel-soft);
+  color: var(--muted);
+  text-align: center;
+}
+
+.empty-state svg {
+  color: var(--muted);
+}
+
+.empty-state strong {
+  color: var(--text);
+  font-size: 0.98rem;
+  font-weight: 800;
+}
+
+.empty-state span {
+  max-width: 52ch;
+  font-size: 0.86rem;
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 20px 0;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel-soft);
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.notice.error {
+  border-color: #f3b8b8;
+  background: var(--danger-soft);
+  color: var(--danger);
+}

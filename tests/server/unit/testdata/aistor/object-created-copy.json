@@ -1,0 +1,22 @@
+{
+  "Records": [
+    {
+      "awsRegion": "us-east-1",
+      "eventName": "s3:ObjectCreated:Copy",
+      "eventSource": "minio:s3",
+      "eventTime": "2026-09-08T11:58:00.000Z",
+      "s3": {
+        "bucket": {
+          "arn": "arn:aws:s3:::lake",
+          "name": "lake"
+        },
+        "object": {
+          "contentType": "application/json",
+          "eTag": "etag-copy",
+          "key": "incoming%2Fcopied.json",
+          "size": 84
+        }
+      }
+    }
+  ]
+}

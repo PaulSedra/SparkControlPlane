@@ -1,0 +1,191 @@
+{
+  "cases": [
+    {
+      "name": "stage matches count unique latest attempts without inferring node output rows",
+      "nodes": [
+        "sales.orders"
+      ],
+      "snapshot": {
+        "stages": [
+          {
+            "attemptId": 0,
+            "description": "scan sales.orders",
+            "inputRecords": 100,
+            "outputRecords": 100,
+            "stageId": 10,
+            "status": "RUNNING"
+          },
+          {
+            "attemptId": 1,
+            "description": "scan sales.orders",
+            "inputRecords": 200,
+            "outputRecords": 25,
+            "stageId": 10,
+            "status": "SUCCEEDED"
+          },
+          {
+            "attemptId": 0,
+            "description": "write sales.orders",
+            "inputRecords": 50,
+            "outputRecords": 0,
+            "stageId": 11,
+            "status": "FAILED"
+          }
+        ]
+      },
+      "expectedMetrics": {
+        "sales.orders": {
+          "bytesRead": null,
+          "bytesWritten": null,
+          "completedStages": 1,
+          "rowsRead": 250,
+          "rowsWritten": null,
+          "totalStages": 2
+        }
+      }
+    },
+    {
+      "name": "SQL execution matches stage progress without inferring node output rows",
+      "nodes": [
+        "sales.orders"
+      ],
+      "snapshot": {
+        "jobs": [
+          {
+            "jobId": 7,
+            "stageIds": [
+              20,
+              21
+            ],
+            "status": "SUCCEEDED"
+          }
+        ],
+        "sql": [
+          {
+            "description": "REFRESH sales.orders",
+            "successJobIds": [
+              7
+            ]
+          }
+        ],
+        "stages": [
+          {
+            "inputRecords": 80,
+            "outputRecords": 40,
+            "stageId": 20,
+            "status": "SUCCEEDED"
+          },
+          {
+            "inputRecords": 20,
+            "outputRecords": 2,
+            "stageId": 21,
+            "status": "RUNNING"
+          }
+        ]
+      },
+      "expectedMetrics": {
+        "sales.orders": {
+          "bytesRead": null,
+          "bytesWritten": null,
+          "completedStages": 1,
+          "rowsRead": 100,
+          "rowsWritten": null,
+          "totalStages": 2
+        }
+      }
+    },
+    {
+      "name": "SQL output rows preserve explicit zero while missing metrics stay unavailable",
+      "nodes": [
+        "sales.orders",
+        "sales.customers"
+      ],
+      "snapshot": {
+        "sql": [
+          {
+            "description": "REFRESH sales.orders",
+            "nodes": [
+              {
+                "metrics": [
+                  {
+                    "name": "Number of output rows",
+                    "value": "0"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "REFRESH sales.customers"
+          }
+        ]
+      },
+      "expectedMetrics": {
+        "sales.orders": {
+          "bytesRead": null,
+          "bytesWritten": null,
+          "completedStages": null,
+          "rowsRead": null,
+          "rowsWritten": 0,
+          "totalStages": null
+        }
+      },
+      "missingNodes": [
+        "sales.customers"
+      ]
+    },
+    {
+      "name": "stage-only progress creates a node metric without row or byte values",
+      "nodes": [
+        "sales.orders"
+      ],
+      "snapshot": {
+        "stages": [
+          {
+            "description": "refresh sales.orders",
+            "stageId": 30,
+            "status": "RUNNING"
+          }
+        ]
+      },
+      "expectedMetrics": {
+        "sales.orders": {
+          "bytesRead": null,
+          "bytesWritten": null,
+          "completedStages": 0,
+          "rowsRead": null,
+          "rowsWritten": null,
+          "totalStages": 1
+        }
+      }
+    }
+  ],
+  "stageProgress": {
+    "selectedSessionId": "run-1",
+    "jobs": [
+      {
+        "jobId": 7,
+        "stageIds": [
+          40,
+          41,
+          42
+        ],
+        "status": "RUNNING"
+      }
+    ],
+    "stages": [
+      {
+        "stageId": 40,
+        "status": "SUCCEEDED"
+      },
+      {
+        "stageId": 41,
+        "status": "RUNNING"
+      }
+    ],
+    "expected": {
+      "completedStages": 1,
+      "totalStages": 3
+    }
+  }
+}

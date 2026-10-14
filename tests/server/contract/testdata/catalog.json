@@ -1,0 +1,106 @@
+{
+  "catalogService": {
+    "catalogs": [
+      {
+        "name": "spark_catalog"
+      }
+    ],
+    "schemas": [
+      {
+        "name": "analytics"
+      }
+    ],
+    "tables": [
+      {
+        "isTemporary": false,
+        "name": "orders",
+        "tableType": "TABLE"
+      }
+    ],
+    "table": {
+      "columns": [
+        {
+          "comment": "Identifier",
+          "name": "id",
+          "type": "bigint"
+        }
+      ],
+      "isTemporary": false,
+      "properties": {
+        "Provider": "delta",
+        "Type": "MANAGED"
+      },
+      "provider": "delta",
+      "tableType": "TABLE"
+    },
+    "tableData": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint"
+        }
+      ],
+      "rows": [
+        [1]
+      ]
+    }
+  },
+  "expected": {
+    "catalogs": {
+      "catalogs": [
+        {
+          "name": "spark_catalog"
+        }
+      ]
+    },
+    "schemas": {
+      "schemas": [
+        {
+          "catalog": "spark_catalog",
+          "name": "analytics"
+        }
+      ]
+    },
+    "tables": {
+      "tables": [
+        {
+          "catalog": "spark_catalog",
+          "isTemporary": false,
+          "name": "orders",
+          "schema": "analytics",
+          "tableType": "TABLE"
+        }
+      ]
+    },
+    "detail": {
+      "catalog": "spark_catalog",
+      "columns": [
+        {
+          "comment": "Identifier",
+          "name": "id",
+          "type": "bigint"
+        }
+      ],
+      "isTemporary": false,
+      "name": "orders",
+      "properties": {
+        "Provider": "delta",
+        "Type": "MANAGED"
+      },
+      "provider": "delta",
+      "schema": "analytics",
+      "tableType": "TABLE"
+    },
+    "sample": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint"
+        }
+      ],
+      "rows": [
+        [1]
+      ]
+    }
+  }
+}

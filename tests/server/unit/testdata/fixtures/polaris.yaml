@@ -1,0 +1,103 @@
+configCases:
+  - name: reuses control-plane credentials with a separate database
+    environment:
+      POSTGRES_DATABASE: spark_control_plane
+      POSTGRES_HOST: postgres.internal
+      POSTGRES_PASSWORD: opaque-test-value
+      POSTGRES_PORT: "5432"
+      POSTGRES_SSLMODE: disable
+      POSTGRES_USER: spark
+      POLARIS_POSTGRES_DATABASE: polaris
+    expected:
+      ca: null
+      cert: null
+      database: polaris
+      host: postgres.internal
+      key: null
+      password: opaque-test-value
+      port: 5432
+      schema: polaris_schema
+      tlsMode: disable
+      user: spark
+  - name: is absent when no PostgreSQL connection is configured
+    environment: {}
+    expected: null
+  - name: defaults to the named polaris database when credentials are shared
+    environment:
+      POSTGRES_HOST: postgres.internal
+      POSTGRES_PASSWORD: opaque-test-value
+      POSTGRES_USER: spark
+    expected:
+      ca: null
+      cert: null
+      database: polaris
+      host: postgres.internal
+      key: null
+      password: opaque-test-value
+      port: 5432
+      schema: polaris_schema
+      tlsMode: require
+      user: spark
+  - name: ignores legacy database and TLS aliases
+    environment:
+      POSTGRES_HOST: postgres.internal
+      POSTGRES_PASSWORD: opaque-test-value
+      POSTGRES_USER: spark
+      POLARIS_POSTGRES_DB: legacy-database
+      POLARIS_POSTGRES_TLS_MODE: disable
+    expected:
+      ca: null
+      cert: null
+      database: polaris
+      host: postgres.internal
+      key: null
+      password: opaque-test-value
+      port: 5432
+      schema: polaris_schema
+      tlsMode: require
+      user: spark
+
+tableMerge:
+  polarisDetail:
+    catalog: sample_catalog
+    columns: []
+    id: polaris-id
+    isTemporary: false
+    location: s3://warehouse/sample_catalog/silver/measurements/
+    name: measurements
+    properties:
+      format-version: "2"
+      location: s3://warehouse/sample_catalog/silver/measurements/
+      table-uuid: table-uuid
+    provider: iceberg
+    schema: silver
+    tableType: TABLE
+  sparkDetail:
+    catalog: sample_catalog
+    columns:
+      - name: record_id
+        type: string
+    isTemporary: false
+    location: s3://spark-location
+    name: measurements
+    properties:
+      Location: s3://spark-location
+      Name: sample_catalog.silver.measurements
+      Provider: iceberg
+      Statistics: 1024 bytes, 2 rows
+      Table Properties: "[format-version=2]"
+      Type: MANAGED
+    provider: iceberg
+    schema: silver
+    tableType: TABLE
+  expected:
+    columns:
+      - name: record_id
+        type: string
+    location: s3://warehouse/sample_catalog/silver/measurements/
+    properties:
+      Location: s3://warehouse/sample_catalog/silver/measurements/
+      location: null
+      format-version: "2"
+      Table Properties: null
+      Statistics: 1024 bytes, 2 rows

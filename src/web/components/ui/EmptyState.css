@@ -1,0 +1,11 @@
+.application-shell .empty-state {
+  min-height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: var(--bg);
+  color: var(--muted);
+}
+
+.application-shell .empty-state strong {
+  color: var(--text);
+}

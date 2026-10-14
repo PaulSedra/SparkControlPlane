@@ -1,0 +1,551 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Spark Control Plane API",
+    "version": "1.0.0",
+    "description": "Private-network API for discovering configured Polaris or Spark catalogs and Spark Declarative Pipelines, plus deploying, running, observing, and canceling pipelines. The canonical application contract is the /api/v1 surface plus the operational /health, /ready, and /metrics endpoints. The optional /spark-api/* Spark History Server proxy is intentionally outside this versioned OpenAPI contract and is enabled only when SPARK_HISTORY_URL is configured."
+  },
+  "x-spark-control-plane-proxy": {
+    "pathPrefix": "/spark-api",
+    "canonical": false,
+    "enabledBy": "SPARK_HISTORY_URL",
+    "purpose": "Optional read-only Spark History Server monitoring proxy; not a control-plane API route."
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "The current control-plane host"
+    }
+  ],
+  "paths": {
+    "/docs": {
+      "get": {
+        "summary": "Open interactive API documentation",
+        "description": "Swagger UI for this OpenAPI document. The UI loads its assets from the jsDelivr CDN.",
+        "responses": {
+          "200": {
+            "description": "Swagger UI HTML document.",
+            "content": {
+              "text/html": {
+                "schema": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "summary": "Read the OpenAPI document",
+        "responses": {
+          "200": {
+            "description": "The canonical OpenAPI document for the control-plane API.",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Process liveness",
+        "responses": {
+          "200": { "$ref": "#/components/responses/Health" },
+          "503": { "$ref": "#/components/responses/Health" }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "summary": "Control-plane readiness",
+        "responses": {
+          "200": { "$ref": "#/components/responses/Readiness" },
+          "503": { "$ref": "#/components/responses/Readiness" }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "summary": "Read Prometheus metrics",
+        "responses": {
+          "200": {
+            "description": "Prometheus text exposition format.",
+            "content": {
+              "text/plain; version=0.0.4": {
+                "schema": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalogs": {
+      "get": {
+        "summary": "Discover catalogs from the configured backend",
+        "responses": {
+          "200": { "description": "Catalogs returned from the configured Polaris or Spark Connect backend.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CatalogList" } } } },
+          "500": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/catalogs/{catalog}/schemas": {
+      "parameters": [{ "$ref": "#/components/parameters/CatalogName" }],
+      "get": {
+        "summary": "Discover schemas in a catalog",
+        "responses": {
+          "200": { "description": "Namespaces returned from the configured catalog backend.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SchemaList" } } } },
+          "500": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/catalogs/{catalog}/schemas/{schema}/tables": {
+      "parameters": [
+        { "$ref": "#/components/parameters/CatalogName" },
+        { "$ref": "#/components/parameters/SchemaName" }
+      ],
+      "get": {
+        "summary": "Discover tables and views in a schema",
+        "responses": {
+          "200": { "description": "Tables and views returned from the configured catalog backend.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TableList" } } } },
+          "500": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/catalogs/{catalog}/schemas/{schema}/tables/{table}": {
+      "parameters": [
+        { "$ref": "#/components/parameters/CatalogName" },
+        { "$ref": "#/components/parameters/SchemaName" },
+        { "$ref": "#/components/parameters/TableName" }
+      ],
+      "get": {
+        "summary": "Read table or view metadata",
+        "responses": {
+          "200": { "description": "Metadata and columns returned from the configured catalog backend.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TableDetail" } } } },
+          "500": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/catalogs/{catalog}/schemas/{schema}/tables/{table}/data": {
+      "parameters": [
+        { "$ref": "#/components/parameters/CatalogName" },
+        { "$ref": "#/components/parameters/SchemaName" },
+        { "$ref": "#/components/parameters/TableName" }
+      ],
+      "get": {
+        "summary": "Read a bounded table or view sample",
+        "parameters": [{ "$ref": "#/components/parameters/Limit" }],
+        "responses": {
+          "200": { "description": "At most 100 rows returned by Spark.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SparkSampleData" } } } },
+          "500": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/pipelines": {
+      "get": {
+        "summary": "List discovered pipelines",
+        "parameters": [
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Offset" },
+          { "$ref": "#/components/parameters/CorrelationId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pipeline summaries sorted by display name.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PipelineList" } } }
+          },
+          "500": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/pipelines/refresh-from-source": {
+      "post": {
+        "summary": "Refresh pipeline snapshots from the source folder",
+        "description": "Explicitly repull and parse the complete mounted pipeline folder, save its new snapshots, and apply YAML trigger enablement. Normal registry reads use saved snapshots.",
+        "responses": {
+          "200": {
+            "description": "Pipeline summaries after the source refresh.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PipelineRefreshResult" }
+              }
+            }
+          },
+          "500": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/history/export": {
+      "get": {
+        "summary": "Export resumable run and audit history batches",
+        "parameters": [
+          { "name": "runEventId", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 0, "default": 0 } },
+          { "name": "auditEventId", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 0, "default": 0 } },
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 1000, "default": 100 } }
+        ],
+        "responses": {
+          "200": { "description": "A batch of source-keyed history rows and the cursor for the next batch.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HistoryExportBatch" } } } },
+          "400": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/triggers": {
+      "get": {
+        "summary": "List trigger definitions",
+        "responses": {
+          "200": {
+            "description": "Trigger definitions sorted by name.",
+            "content": { "application/json": { "schema": { "type": "object", "required": ["triggers"], "properties": { "triggers": { "type": "array", "items": { "$ref": "#/components/schemas/TriggerDefinition" } } } } } }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a trigger definition",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TriggerDefinitionInput" } } }
+        },
+        "responses": {
+          "201": { "description": "Trigger definition created.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TriggerDefinition" } } } },
+          "400": { "$ref": "#/components/responses/Error" },
+          "409": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/triggers/events": {
+      "get": {
+        "summary": "List recent normalized trigger events",
+        "parameters": [{ "$ref": "#/components/parameters/Limit" }],
+        "responses": {
+          "200": { "description": "Recently received events and their durable status.", "content": { "application/json": { "schema": { "type": "object" } } } }
+        }
+      },
+      "post": {
+        "summary": "Ingest one canonical trigger event",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CanonicalTriggerEvent" } } }
+        },
+        "responses": {
+          "202": { "description": "Event accepted for routing.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TriggerIngestionResult" } } } },
+          "400": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/triggers/routing-decisions": {
+      "get": {
+        "summary": "List recent trigger routing decisions",
+        "parameters": [{ "$ref": "#/components/parameters/Limit" }, { "name": "eventId", "in": "query", "required": false, "schema": { "type": "string" } }, { "name": "triggerId", "in": "query", "required": false, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "Routing decisions with outcome and reason.", "content": { "application/json": { "schema": { "type": "object" } } } }
+        }
+      }
+    },
+    "/api/v1/triggers/delivery-attempts": {
+      "get": {
+        "summary": "List recent trigger delivery attempts",
+        "parameters": [{ "$ref": "#/components/parameters/Limit" }, { "name": "triggerId", "in": "query", "required": false, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "Delivery attempts with status, run, and failure details.", "content": { "application/json": { "schema": { "type": "object" } } } }
+        }
+      }
+    },
+    "/api/v1/triggers/dead-letters": {
+      "get": {
+        "summary": "List trigger delivery dead letters",
+        "parameters": [
+          { "$ref": "#/components/parameters/Limit" },
+          { "name": "status", "in": "query", "required": false, "schema": { "type": "string", "enum": ["PENDING", "REPLAYED", "DISCARDED"] } }
+        ],
+        "responses": {
+          "200": { "description": "Dead-letter records containing the original event and latest failure reason.", "content": { "application/json": { "schema": { "type": "object", "required": ["deadLetters"], "properties": { "deadLetters": { "type": "array", "items": { "$ref": "#/components/schemas/TriggerDeadLetter" } } } } } } },
+          "400": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/triggers/dead-letters/{deadLetterId}/replay": {
+      "parameters": [{ "$ref": "#/components/parameters/DeadLetterId" }],
+      "post": {
+        "summary": "Replay a pending trigger dead letter",
+        "responses": {
+          "202": { "description": "The original event was submitted through the normal run path.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TriggerIngestionResult" } } } },
+          "404": { "$ref": "#/components/responses/Error" },
+          "409": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/triggers/dead-letters/{deadLetterId}/discard": {
+      "parameters": [{ "$ref": "#/components/parameters/DeadLetterId" }],
+      "post": {
+        "summary": "Discard a pending trigger dead letter",
+        "responses": {
+          "200": { "description": "Dead letter marked discarded with a durable delivery attempt.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TriggerDeadLetter" } } } },
+          "404": { "$ref": "#/components/responses/Error" },
+          "409": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/triggers/aistor/events": {
+      "post": {
+        "summary": "Ingest AIStor S3-compatible notification records",
+        "description": "Reads Records[] and normalizes each valid record into the canonical trigger event envelope. The AIStor adapter is owned by the control plane and does not depend on another receiver project.",
+        "security": [{ "AistorBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "Records": { "type": "array", "items": { "type": "object" } } }, "additionalProperties": true } } }
+        },
+        "responses": {
+          "202": { "description": "Notification records accepted for routing.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TriggerIngestionResult" } } } },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Error" },
+          "503": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/triggers/{triggerId}": {
+      "parameters": [{ "$ref": "#/components/parameters/TriggerId" }],
+      "get": {
+        "summary": "Read a trigger definition",
+        "responses": {
+          "200": { "description": "Trigger definition.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TriggerDefinition" } } } },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      },
+      "patch": {
+        "summary": "Update a trigger definition",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TriggerDefinitionPatch" } } }
+        },
+        "responses": {
+          "200": { "description": "Updated trigger definition.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TriggerDefinition" } } } },
+          "400": { "$ref": "#/components/responses/Error" },
+          "404": { "$ref": "#/components/responses/Error" },
+          "409": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/triggers/{triggerId}/schedule": {
+      "parameters": [{ "$ref": "#/components/parameters/TriggerId" }],
+      "get": {
+        "summary": "Read schedule occurrence and submission status",
+        "responses": {
+          "200": { "description": "Last and next schedule occurrence plus the last submission outcome.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TriggerScheduleStatus" } } } },
+          "400": { "$ref": "#/components/responses/Error" },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/pipelines/{pipelineId}": {
+      "parameters": [{ "$ref": "#/components/parameters/PipelineId" }],
+      "get": {
+        "summary": "Read a pipeline graph and optional history",
+        "parameters": [
+          { "name": "includeRuns", "in": "query", "required": false, "schema": { "type": "boolean", "default": true }, "description": "Set false to return structural pipeline data without run history." }
+        ],
+        "responses": {
+          "200": { "description": "Pipeline detail.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PipelineDetail" } } } },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/pipelines/{pipelineId}/deploy": {
+      "parameters": [{ "$ref": "#/components/parameters/PipelineId" }],
+      "post": {
+        "summary": "Record the currently mounted source as deployed",
+        "responses": {
+          "200": { "description": "Updated pipeline detail.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PipelineDetail" } } } },
+          "404": { "$ref": "#/components/responses/Error" },
+          "409": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/pipelines/{pipelineId}/runs": {
+      "parameters": [{ "$ref": "#/components/parameters/PipelineId" }],
+      "get": {
+        "summary": "List pipeline runs",
+        "parameters": [
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Offset" },
+          { "$ref": "#/components/parameters/CorrelationId" }
+        ],
+        "responses": {
+          "200": { "description": "Runs ordered newest first.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PipelineRunList" } } } },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      },
+      "post": {
+        "summary": "Enqueue a pipeline run",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdempotencyKey" },
+          { "$ref": "#/components/parameters/CorrelationId" },
+          { "$ref": "#/components/parameters/RequestSource" }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RunSubmission" } } }
+        },
+        "responses": {
+          "202": {
+            "description": "Run accepted or replayed.",
+            "headers": {
+              "Location": { "schema": { "type": "string" } },
+              "Retry-After": { "schema": { "type": "integer" } },
+              "Idempotent-Replayed": { "schema": { "type": "string", "enum": ["true"] } }
+            },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PipelineRun" } } }
+          },
+          "400": { "$ref": "#/components/responses/Error" },
+          "404": { "$ref": "#/components/responses/Error" },
+          "409": { "$ref": "#/components/responses/Error" },
+          "503": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/runs/{runId}": {
+      "parameters": [{ "$ref": "#/components/parameters/RunId" }],
+      "get": {
+        "summary": "Read one run projection",
+        "responses": {
+          "200": { "description": "Current run state.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PipelineRun" } } } },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/runs/{runId}/status": {
+      "parameters": [{ "$ref": "#/components/parameters/RunId" }],
+      "get": {
+        "summary": "Read the lightweight current run status",
+        "responses": {
+          "200": { "description": "Current run status without command or log output.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PipelineRun" } } } },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/runs/{runId}/events": {
+      "parameters": [{ "$ref": "#/components/parameters/RunId" }],
+      "get": {
+        "summary": "List run lifecycle events",
+        "parameters": [
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Offset" },
+          { "$ref": "#/components/parameters/CorrelationId" }
+        ],
+        "responses": {
+          "200": { "description": "Run events ordered oldest first.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RunEventList" } } } },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/runs/{runId}/cancel": {
+      "parameters": [{ "$ref": "#/components/parameters/RunId" }],
+      "post": {
+        "summary": "Request queued or active run cancellation",
+        "parameters": [{ "$ref": "#/components/parameters/Actor" }],
+        "requestBody": {
+          "required": false,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CancellationRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Current run state after recording the request.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PipelineRun" } } } },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/pipelines/{pipelineId}/nodes/{nodeId}/data": {
+      "parameters": [
+        { "$ref": "#/components/parameters/PipelineId" },
+        { "$ref": "#/components/parameters/NodeId" }
+      ],
+      "get": {
+        "summary": "Read a bounded dataset sample",
+        "responses": {
+          "200": { "description": "At most 100 rows.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PipelineNodeData" } } } },
+          "404": { "$ref": "#/components/responses/Error" },
+          "502": { "$ref": "#/components/responses/Error" },
+          "503": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/pipelines/{pipelineId}/source": {
+      "parameters": [{ "$ref": "#/components/parameters/PipelineId" }],
+      "get": {
+        "summary": "Read a registered pipeline source file",
+        "parameters": [{ "name": "file", "in": "query", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Read-only source content.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PipelineSourceFile" } } } },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "AistorBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Use the raw value configured by AISTOR_WEBHOOK_TOKEN. AIStor's Auth Token field should send Bearer followed by that value."
+      }
+    },
+    "parameters": {
+      "CatalogName": { "name": "catalog", "in": "path", "required": true, "schema": { "type": "string" } },
+      "SchemaName": { "name": "schema", "in": "path", "required": true, "schema": { "type": "string" } },
+      "TableName": { "name": "table", "in": "path", "required": true, "schema": { "type": "string" } },
+      "PipelineId": { "name": "pipelineId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+      "RunId": { "name": "runId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+      "TriggerId": { "name": "triggerId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+      "DeadLetterId": { "name": "deadLetterId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+      "NodeId": { "name": "nodeId", "in": "path", "required": true, "schema": { "type": "string" } },
+      "IdempotencyKey": { "name": "Idempotency-Key", "in": "header", "required": false, "schema": { "type": "string", "maxLength": 512 } },
+      "Actor": { "name": "X-Actor", "in": "header", "required": false, "schema": { "type": "string", "maxLength": 200 } },
+      "CorrelationId": { "name": "X-Correlation-ID", "in": "header", "required": false, "schema": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$" } },
+      "RequestSource": { "name": "X-Request-Source", "in": "header", "required": false, "schema": { "type": "string", "maxLength": 256 } },
+      "Limit": { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 50 } },
+      "Offset": { "name": "offset", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 0, "default": 0 } }
+    },
+    "responses": {
+      "Error": { "description": "Stable broad error code and human-readable message.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } },
+      "Health": { "description": "Process health.", "content": { "application/json": { "schema": { "type": "object", "required": ["status"], "properties": { "status": { "type": "string" } } } } } },
+      "Readiness": { "description": "Readiness checks.", "content": { "application/json": { "schema": { "type": "object", "required": ["status", "checks"], "properties": { "status": { "type": "string" }, "checks": { "type": "object", "additionalProperties": { "type": "string" } } } } } } }
+    },
+    "schemas": {
+      "ApiError": { "type": "object", "required": ["code", "message"], "properties": { "code": { "type": "string" }, "message": { "type": "string" } } },
+      "CatalogList": { "type": "object", "required": ["catalogs"], "properties": { "catalogs": { "type": "array", "items": { "$ref": "#/components/schemas/Catalog" } } } },
+      "SchemaList": { "type": "object", "required": ["schemas"], "properties": { "schemas": { "type": "array", "items": { "$ref": "#/components/schemas/Schema" } } } },
+      "TableList": { "type": "object", "required": ["tables"], "properties": { "tables": { "type": "array", "items": { "$ref": "#/components/schemas/Table" } } } },
+      "Catalog": { "type": "object", "required": ["name"], "properties": { "id": { "type": "string" }, "name": { "type": "string" } } },
+      "Schema": { "type": "object", "required": ["catalog", "name"], "properties": { "catalog": { "type": "string" }, "id": { "type": "string" }, "name": { "type": "string" } } },
+      "Table": { "type": "object", "required": ["catalog", "isTemporary", "name", "schema", "tableType"], "properties": { "catalog": { "type": "string" }, "id": { "type": "string" }, "isTemporary": { "type": "boolean" }, "name": { "type": "string" }, "schema": { "type": "string" }, "tableType": { "type": "string", "enum": ["TABLE", "UNKNOWN", "VIEW"] } } },
+      "TableDetail": { "allOf": [{ "$ref": "#/components/schemas/Table" }, { "type": "object", "required": ["columns", "properties"], "properties": { "comment": { "type": "string" }, "columns": { "type": "array", "items": { "type": "object", "required": ["name", "type"], "properties": { "name": { "type": "string" }, "type": { "type": "string" }, "comment": { "type": "string" } } } }, "location": { "type": "string" }, "properties": { "type": "object", "additionalProperties": { "type": "string" } }, "provider": { "type": "string" }, "viewDefinition": { "type": "string" } } }] },
+      "SparkSampleData": { "type": "object", "required": ["columns", "rows"], "properties": { "columns": { "type": "array", "items": { "type": "object", "required": ["name", "type"], "properties": { "name": { "type": "string" }, "type": { "type": "string" } } } }, "rows": { "type": "array", "maxItems": 100, "items": { "type": "array", "items": {} } } } },
+      "RunSubmission": { "type": "object", "properties": { "mode": { "type": "string", "enum": ["incremental", "full-refresh-all", "repair-failed", "dry-run", "refresh-selected", "full-refresh-selected"] }, "nodeNames": { "type": "array", "items": { "type": "string" } }, "idempotencyKey": { "type": "string", "maxLength": 256 }, "callerMetadata": { "type": "object", "additionalProperties": { "type": "string", "maxLength": 512 }, "maxProperties": 32 }, "requestSource": { "type": "string", "maxLength": 256 } }, "additionalProperties": false },
+      "TriggerDefinitionInput": { "type": "object", "required": ["configuration", "mode", "name", "pipelineId", "type"], "properties": { "callerMetadata": { "type": "object", "additionalProperties": { "type": "string" } }, "configuration": { "type": "object", "additionalProperties": true }, "enabled": { "type": "boolean", "default": true }, "mode": { "type": "string", "enum": ["incremental", "full-refresh-all", "repair-failed", "dry-run", "refresh-selected", "full-refresh-selected"] }, "name": { "type": "string", "maxLength": 256 }, "nodeNames": { "type": "array", "items": { "type": "string" } }, "pipelineId": { "type": "string", "format": "uuid" }, "type": { "type": "string", "enum": ["FILE_ARRIVAL", "SCHEDULE", "WEBHOOK"] } }, "additionalProperties": false },
+      "TriggerDefinitionPatch": { "type": "object", "properties": { "callerMetadata": { "type": "object", "additionalProperties": { "type": "string" } }, "configuration": { "type": "object", "additionalProperties": true }, "enabled": { "type": "boolean" }, "mode": { "type": "string", "enum": ["incremental", "full-refresh-all", "repair-failed", "dry-run", "refresh-selected", "full-refresh-selected"] }, "name": { "type": "string", "maxLength": 256 }, "nodeNames": { "type": "array", "items": { "type": "string" } }, "pipelineId": { "type": "string", "format": "uuid" }, "type": { "type": "string", "enum": ["FILE_ARRIVAL", "SCHEDULE", "WEBHOOK"] } }, "additionalProperties": false },
+      "TriggerDefinition": { "allOf": [{ "$ref": "#/components/schemas/TriggerDefinitionInput" }, { "type": "object", "required": ["active", "createdAt", "enabled", "id", "updatedAt"], "properties": { "active": { "type": "boolean", "description": "Whether the definition is present in the current trigger configuration." }, "createdAt": { "type": "string", "format": "date-time" }, "enabled": { "type": "boolean", "description": "Whether the current trigger definition is resumed rather than paused." }, "id": { "type": "string", "format": "uuid" }, "lastOutcome": { "type": "object" }, "managedByYaml": { "type": "boolean", "description": "Whether the trigger is reconciled from a top-level triggers entry in the pipeline YAML file." }, "updatedAt": { "type": "string", "format": "date-time" } } }] },
+      "TriggerScheduleStatus": { "type": "object", "required": ["triggerId"], "properties": { "triggerId": { "type": "string", "format": "uuid" }, "lastOccurrenceAt": { "type": "string", "format": "date-time" }, "nextOccurrenceAt": { "type": "string", "format": "date-time" }, "lastOutcome": { "type": "object" } } },
+      "CanonicalTriggerEvent": { "type": "object", "required": ["attributes", "deduplicationKey", "eventId", "eventType", "occurredAt", "payload", "source"], "properties": { "attributes": { "type": "object", "additionalProperties": { "type": "string" } }, "deduplicationKey": { "type": "string" }, "eventId": { "type": "string" }, "eventType": { "type": "string" }, "occurredAt": { "type": "string", "format": "date-time" }, "payload": { "type": "object", "additionalProperties": true }, "source": { "type": "string" } }, "additionalProperties": false },
+      "TriggerIngestionResult": { "type": "object", "required": ["accepted", "duplicates", "failed", "ignored", "items"], "properties": { "accepted": { "type": "integer" }, "duplicates": { "type": "integer" }, "failed": { "type": "integer" }, "ignored": { "type": "integer" }, "items": { "type": "array", "items": { "$ref": "#/components/schemas/TriggerIngestionItem" } } } },
+      "TriggerIngestionItem": { "type": "object", "required": ["eventId", "status"], "properties": { "eventId": { "type": "string" }, "reason": { "type": "string" }, "status": { "type": "string", "enum": ["ACCEPTED", "DEBOUNCED", "DUPLICATE", "FAILED", "IGNORED"] }, "triggerIds": { "type": "array", "items": { "type": "string", "format": "uuid" } } } },
+      "TriggerDeadLetter": { "type": "object", "required": ["createdAt", "event", "eventId", "failureReason", "id", "replayCount", "status", "triggerId", "updatedAt"], "properties": { "createdAt": { "type": "string", "format": "date-time" }, "event": { "$ref": "#/components/schemas/CanonicalTriggerEvent" }, "eventId": { "type": "string" }, "failureReason": { "type": "string" }, "id": { "type": "string", "format": "uuid" }, "replayCount": { "type": "integer", "minimum": 0 }, "status": { "type": "string", "enum": ["PENDING", "REPLAYED", "DISCARDED"] }, "triggerId": { "type": "string", "format": "uuid" }, "updatedAt": { "type": "string", "format": "date-time" } } },
+      "HistoryExportCursor": { "type": "object", "required": ["auditEventId", "runEventId"], "properties": { "auditEventId": { "type": "integer", "minimum": 0 }, "runEventId": { "type": "integer", "minimum": 0 } } },
+      "PipelineRunHistoryRecord": { "type": "object", "required": ["eventType", "occurredAt", "payload", "pipelineId", "runEventId", "runId"], "properties": { "correlationId": { "type": "string" }, "eventType": { "type": "string" }, "occurredAt": { "type": "string", "format": "date-time" }, "payload": { "type": "object", "additionalProperties": true }, "pipelineId": { "type": "string", "format": "uuid" }, "requestSource": { "type": "string" }, "runEventId": { "type": "string" }, "runId": { "type": "string", "format": "uuid" }, "status": { "type": "string" }, "triggerSource": { "type": "string" } } },
+      "PipelineAuditHistoryRecord": { "type": "object", "required": ["auditEventId", "eventType", "occurredAt", "payload"], "properties": { "actor": { "type": "string" }, "auditEventId": { "type": "string" }, "correlationId": { "type": "string" }, "eventType": { "type": "string" }, "occurredAt": { "type": "string", "format": "date-time" }, "payload": { "type": "object", "additionalProperties": true }, "pipelineId": { "type": "string", "format": "uuid" }, "requestSource": { "type": "string" }, "runId": { "type": "string", "format": "uuid" } } },
+      "HistoryExportBatch": { "type": "object", "required": ["auditHistory", "nextCursor", "pipelineRunHistory"], "properties": { "auditHistory": { "type": "array", "items": { "$ref": "#/components/schemas/PipelineAuditHistoryRecord" } }, "nextCursor": { "$ref": "#/components/schemas/HistoryExportCursor" }, "pipelineRunHistory": { "type": "array", "items": { "$ref": "#/components/schemas/PipelineRunHistoryRecord" } } } },
+      "CancellationRequest": { "type": "object", "properties": { "reason": { "type": "string", "maxLength": 2000 } }, "additionalProperties": false },
+      "PipelineList": { "type": "object", "required": ["pipelines", "items", "offset", "total"], "properties": { "pipelines": { "type": "array", "items": { "$ref": "#/components/schemas/PipelineSummary" } }, "items": { "type": "array", "items": { "$ref": "#/components/schemas/PipelineSummary" } }, "nextOffset": { "type": "integer" }, "offset": { "type": "integer" }, "total": { "type": "integer" } } },
+      "PipelineRefreshResult": { "type": "object", "required": ["pipelines", "total"], "properties": { "pipelines": { "type": "array", "items": { "$ref": "#/components/schemas/PipelineSummary" } }, "total": { "type": "integer" } } },
+      "PipelineRunList": { "type": "object", "required": ["items", "offset", "total"], "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/PipelineRun" } }, "nextOffset": { "type": "integer" }, "offset": { "type": "integer" }, "total": { "type": "integer" } } },
+      "RunEventList": { "type": "object", "required": ["items", "offset", "total"], "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/RunEvent" } }, "nextOffset": { "type": "integer" }, "offset": { "type": "integer" }, "total": { "type": "integer" } } },
+      "RunEvent": { "type": "object", "required": ["eventId", "eventType", "occurredAt", "payload", "runId"], "properties": { "eventId": { "type": "integer" }, "eventType": { "type": "string" }, "status": { "type": "string" }, "occurredAt": { "type": "string", "format": "date-time" }, "payload": { "type": "object" }, "runId": { "type": "string", "format": "uuid" }, "correlationId": { "type": "string" } } },
+      "PipelineSummary": { "type": "object", "required": ["id", "name", "nodeCount", "recentRuns", "sourceHash", "status", "specPath"], "properties": { "id": { "type": "string", "format": "uuid" }, "name": { "type": "string" }, "nodeCount": { "type": "integer" }, "recentRuns": { "type": "array", "items": { "$ref": "#/components/schemas/PipelineRun" } }, "sourceHash": { "type": "string" }, "specPath": { "type": "string" }, "status": { "type": "string" }, "currentVersionId": { "type": "string" }, "updatedAt": { "type": "string", "format": "date-time" } } },
+      "PipelineDetail": { "allOf": [{ "$ref": "#/components/schemas/PipelineSummary" }, { "type": "object", "required": ["edges", "nodes", "runs", "sourceFiles", "spec", "validationMessages"], "properties": { "edges": { "type": "array", "items": { "type": "object" } }, "nodes": { "type": "array", "items": { "type": "object" } }, "runs": { "type": "array", "items": { "$ref": "#/components/schemas/PipelineRun" } }, "sourceFiles": { "type": "array", "items": { "type": "string" } }, "spec": { "$ref": "#/components/schemas/PipelineSpec" }, "validationMessages": { "type": "array", "items": { "type": "string" } } } }] },
+      "PipelineSpec": { "type": "object", "required": ["libraries", "name", "specPath", "storage"], "properties": { "catalog": { "type": "string" }, "database": { "type": "string" }, "libraries": { "type": "array", "items": { "type": "string" } }, "name": { "type": "string" }, "onSuccess": { "$ref": "#/components/schemas/PipelineSuccessDependency" }, "schema": { "type": "string" }, "specPath": { "type": "string" }, "storage": { "type": "string" }, "timeoutSeconds": { "type": "integer", "minimum": 1, "maximum": 604800 } } },
+      "PipelineSuccessDependency": { "type": "object", "required": ["pipeline"], "properties": { "pipeline": { "type": "string", "minLength": 1 } }, "additionalProperties": false },
+      "PipelineRun": { "type": "object", "required": ["runId", "pipelineId", "status", "mode", "sparkAppName", "startedAt"], "properties": { "runId": { "type": "string", "format": "uuid" }, "pipelineId": { "type": "string", "format": "uuid" }, "status": { "type": "string", "enum": ["QUEUED", "SUBMITTING", "RUNNING", "SUCCEEDED", "FAILED", "CANCELED", "TIMED_OUT", "UNKNOWN"] }, "mode": { "type": "string" }, "sparkAppName": { "type": "string" }, "startedAt": { "type": "string", "format": "date-time" }, "endedAt": { "type": "string", "format": "date-time" }, "terminalEventAt": { "type": "string", "format": "date-time" }, "exitCode": { "type": "integer" }, "sourceHash": { "type": "string" }, "versionId": { "type": "string" }, "stderr": { "type": "string" }, "stdout": { "type": "string" }, "correlationId": { "type": "string" }, "requestSource": { "type": "string" }, "callerMetadata": { "type": "object", "additionalProperties": { "type": "string" } }, "allowOverlap": { "type": "boolean" }, "timeoutSeconds": { "type": "integer" }, "leaseLost": { "type": "boolean" }, "recoveryReason": { "type": "string" }, "terminalReason": { "type": "string" }, "cliExecutionId": { "type": "string" }, "cliState": { "type": "string", "enum": ["STARTING", "RUNNING", "COMPLETED", "FAILED", "CANCELED", "TIMED_OUT", "UNKNOWN"] }, "cliProcessId": { "type": "integer" }, "cliRunDirectory": { "type": "string" }, "cliStartedAt": { "type": "string", "format": "date-time" }, "cliStdoutOffset": { "type": "integer" }, "cliStderrOffset": { "type": "integer" }, "sparkExecutionState": { "type": "string", "enum": ["COMPLETED", "DETACHED", "MONITORING", "NOT_STARTED", "OPERATION_LOST", "REATTACHING", "SUBMITTING"] }, "sparkLastResponseId": { "type": "string" }, "sparkOperationId": { "type": "string", "format": "uuid" }, "sparkSessionId": { "type": "string", "format": "uuid" }, "sparkStageProgress": { "type": "object", "required": ["completedStages", "observedAt", "totalStages"], "properties": { "activeStages": { "type": "integer" }, "completedStages": { "type": "integer" }, "numInflightTasks": { "type": "integer" }, "observedAt": { "type": "string", "format": "date-time" }, "totalStages": { "type": "integer" } } }, "nodeStatuses": { "type": "object", "additionalProperties": { "type": "object", "required": ["lastUpdatedAt", "qualifiedName", "status"], "properties": { "completedAt": { "type": "string", "format": "date-time" }, "durationMs": { "type": "integer", "minimum": 0 }, "lastUpdatedAt": { "type": "string", "format": "date-time" }, "qualifiedName": { "type": "string" }, "startedAt": { "type": "string", "format": "date-time" }, "status": { "type": "string", "enum": ["QUEUED", "PLANNING", "STARTING", "RUNNING", "COMPLETED", "FAILED", "CANCELED", "UNKNOWN"] } } } }, "targetNodeNames": { "type": "array", "items": { "type": "string" } } } },
+      "PipelineNodeData": { "type": "object", "required": ["columns", "rows"], "properties": { "columns": { "type": "array", "items": { "type": "object", "required": ["name", "type"], "properties": { "name": { "type": "string" }, "type": { "type": "string" } } } }, "rows": { "type": "array", "maxItems": 100, "items": { "type": "array", "items": {} } } } },
+      "PipelineSourceFile": { "type": "object", "required": ["content", "language", "path"], "properties": { "content": { "type": "string" }, "language": { "type": "string", "enum": ["python", "sql", "text"] }, "path": { "type": "string" } } }
+    }
+  }
+}

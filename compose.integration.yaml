@@ -1,0 +1,194 @@
+name: spark-control-plane-integration
+
+services:
+  postgres:
+    image: postgres:16.4-bookworm@sha256:9a70e4d1c03a5066080292db2dd95ee3965d3651316e21989fa0935afb8ce8ca
+    environment:
+      POSTGRES_DB: ${POSTGRES_DATABASE:?The integration database name is required}
+      POSTGRES_USER: ${POSTGRES_USER:?The integration database user is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?The integration database password is required}
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:?The integration PostgreSQL host port is required}:5432"
+    volumes:
+      - integration-postgres-data:/var/lib/postgresql/data
+      - type: bind
+        source: ./docker/integration/postgres/001-create-polaris.sql
+        target: /docker-entrypoint-initdb.d/001-create-polaris.sql
+        read_only: true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  polaris-bootstrap:
+    image: apache/polaris-admin-tool:1.7.0@sha256:a52ff34dae8143cc1f320ec9c187f1c9a8d0a8e78a8bae29a7fb774d8f3415e0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POLARIS_PERSISTENCE_TYPE: relational-jdbc
+      POLARIS_PERSISTENCE_RELATIONAL_JDBC_DATABASE_TYPE: postgresql
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres:5432/${POLARIS_POSTGRES_DATABASE}?currentSchema=${POLARIS_POSTGRES_SCHEMA}
+      QUARKUS_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      QUARKUS_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+    command:
+      - bootstrap
+      - --realm=${POLARIS_REALM}
+      - --credential=${POLARIS_REALM},${POLARIS_CLIENT_ID},${POLARIS_CLIENT_SECRET}
+
+  polaris:
+    image: apache/polaris:1.7.0@sha256:e90a555b6d211646a97ab2768fdb0ab261beaf0f8eeae997f789b102939fc35b
+    depends_on:
+      polaris-bootstrap:
+        condition: service_completed_successfully
+    environment:
+      POLARIS_PERSISTENCE_TYPE: relational-jdbc
+      POLARIS_PERSISTENCE_RELATIONAL_JDBC_DATABASE_TYPE: postgresql
+      POLARIS_PERSISTENCE_RELATIONAL_JDBC_MAX_RETRIES: 5
+      POLARIS_PERSISTENCE_RELATIONAL_JDBC_INITIAL_DELAY_IN_MS: 100
+      POLARIS_PERSISTENCE_RELATIONAL_JDBC_MAX_DURATION_IN_MS: 5000
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres:5432/${POLARIS_POSTGRES_DATABASE}?currentSchema=${POLARIS_POSTGRES_SCHEMA}
+      QUARKUS_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      QUARKUS_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      POLARIS_REALM_CONTEXT_REALMS: ${POLARIS_REALM}
+      POLARIS_BOOTSTRAP_CREDENTIALS: ${POLARIS_REALM},${POLARIS_CLIENT_ID},${POLARIS_CLIENT_SECRET}
+      QUARKUS_OTEL_SDK_DISABLED: "true"
+      polaris.features."ALLOW_INSECURE_STORAGE_TYPES": "true"
+      polaris.features."SUPPORTED_CATALOG_STORAGE_TYPES": '["FILE"]'
+      polaris.readiness.ignore-severe-issues: "true"
+    ports:
+      - "127.0.0.1:${POLARIS_HOST_PORT:?The integration Polaris host port is required}:8181"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8182/q/health"]
+      interval: 2s
+      timeout: 10s
+      retries: 60
+      start_period: 10s
+
+  spark-connect:
+    build:
+      context: ./docker/integration/spark
+    image: ${INTEGRATION_SPARK_IMAGE:?The integration Spark image is required}
+    depends_on:
+      polaris:
+        condition: service_healthy
+    environment:
+      HOME: /tmp
+      PYTHONPATH: /opt/spark/python:/opt/spark/python/lib/py4j-0.10.9.9-src.zip
+      SPARK_NO_DAEMONIZE: "1"
+      SPARK_LOCAL_IP: spark-connect
+      SPARK_LOCAL_DIRS: /tmp/spark-local
+    command:
+      - /opt/spark/sbin/start-connect-server.sh
+      - --wait
+      - --packages
+      - org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0
+      - --conf
+      - spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
+      - --conf
+      - spark.sql.catalog.${POLARIS_CATALOG_NAME}=org.apache.iceberg.spark.SparkCatalog
+      - --conf
+      - spark.sql.catalog.${POLARIS_CATALOG_NAME}.type=rest
+      - --conf
+      - spark.sql.catalog.${POLARIS_CATALOG_NAME}.warehouse=${POLARIS_CATALOG_NAME}
+      - --conf
+      - spark.sql.catalog.${POLARIS_CATALOG_NAME}.uri=http://polaris:8181/api/catalog
+      - --conf
+      - spark.sql.catalog.${POLARIS_CATALOG_NAME}.credential=${POLARIS_CLIENT_ID}:${POLARIS_CLIENT_SECRET}
+      - --conf
+      - spark.sql.catalog.${POLARIS_CATALOG_NAME}.scope=PRINCIPAL_ROLE:ALL
+      - --conf
+      - spark.sql.catalog.${POLARIS_CATALOG_NAME}.header.X-Iceberg-Access-Delegation=vended-credentials
+      - --conf
+      - spark.sql.defaultCatalog=${POLARIS_CATALOG_NAME}
+      - --conf
+      - spark.sql.warehouse.dir=file:///tmp/spark-control-plane-integration-warehouse
+      - --conf
+      - spark.jars.ivy=/tmp/.ivy2.5.2
+      - --conf
+      - spark.driver.bindAddress=0.0.0.0
+      - --conf
+      - spark.driver.host=spark-connect
+    ports:
+      - "127.0.0.1:${SPARK_CONNECT_HOST_PORT:?The integration Spark host port is required}:15002"
+    volumes:
+      - type: bind
+        source: ./tests/integration/support/seed-integration-catalog.py
+        target: /opt/integration/seed-integration-catalog.py
+        read_only: true
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/15002'"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+      start_period: 20s
+
+  control-plane:
+    build:
+      context: .
+      args:
+        APP_VERSION: 0.1.0
+        NODE_IMAGE: node:24.19.0-bookworm-slim
+        PYTHON_IMAGE: python:3.10.12-slim-bookworm
+        PYSPARK_VERSION: 4.2.0
+    image: ${INTEGRATION_CONTROL_PLANE_IMAGE:?The integration control-plane image is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      polaris:
+        condition: service_healthy
+      spark-connect:
+        condition: service_healthy
+    environment:
+      CONTROL_PLANE_HOST: 0.0.0.0
+      CONTROL_PLANE_PORT: 8080
+      CATALOG_BACKEND: ${CATALOG_BACKEND:-polaris}
+      CONTROL_PLANE_DRAIN_SECONDS: 1
+      AISTOR_WEBHOOK_TOKEN: ${AISTOR_WEBHOOK_TOKEN}
+      PIPELINES_DIR: /app/pipelines
+      PIPELINE_RUN_LEASE_SECONDS: 30
+      PIPELINE_RUN_RECOVERY_INTERVAL_SECONDS: 1
+      PIPELINE_RUN_RECOVERY_BATCH_SIZE: 100
+      PIPELINE_CHILD_TERMINATION_GRACE_SECONDS: 2
+      PYTHON_EXECUTABLE: /usr/local/bin/python
+      PYSPARK_PYTHON: /usr/local/bin/python
+      PYSPARK_DRIVER_PYTHON: /usr/local/bin/python
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_SSLMODE: disable
+      POSTGRES_SCHEMA: spark_control_plane
+      POLARIS_REALM: ${POLARIS_REALM}
+      POLARIS_POSTGRES_HOST: postgres
+      POLARIS_POSTGRES_PORT: 5432
+      POLARIS_POSTGRES_DATABASE: ${POLARIS_POSTGRES_DATABASE}
+      POLARIS_POSTGRES_USER: ${POSTGRES_USER}
+      POLARIS_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POLARIS_POSTGRES_SSLMODE: disable
+      POLARIS_POSTGRES_SCHEMA: ${POLARIS_POSTGRES_SCHEMA}
+      SPARK_CONNECT_URL: sc://spark-connect:15002
+      SPARK_HISTORY_URL: ${SPARK_HISTORY_URL:-}
+    ports:
+      - "127.0.0.1:${CONTROL_PLANE_HOST_PORT:?The integration control-plane host port is required}:8080"
+    volumes:
+      - type: bind
+        source: ${INTEGRATION_PIPELINES_PATH:?The integration pipeline fixture path is required}
+        target: /app/pipelines
+        read_only: true
+    healthcheck:
+      test: ["CMD", "node", "docker/control-plane-healthcheck.mjs"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
+
+volumes:
+  integration-postgres-data:
+
+networks:
+  default:
+    name: ${INTEGRATION_NETWORK_NAME:?The integration network name is required}

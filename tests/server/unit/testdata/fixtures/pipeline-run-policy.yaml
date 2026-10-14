@@ -1,0 +1,17 @@
+cases:
+  - name: defaults to serialized runs without a timeout
+    policyName: Example
+    expected:
+      allowOverlap: false
+  - name: allows explicitly configured overlap
+    policyName: example
+    configuredPolicies:
+      Example:
+        allowOverlap: true
+    expected:
+      allowOverlap: true
+  - name: rejects timeout values in environment policy
+    configuredPolicies:
+      Example:
+        timeoutSeconds: 90
+    errorIncludes: "use timeout_seconds in pipeline YAML"

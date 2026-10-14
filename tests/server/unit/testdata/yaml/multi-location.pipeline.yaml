@@ -1,0 +1,12 @@
+name: Multi-location Pipeline
+storage: s3://checkpoints/multi-location
+triggers:
+  - name: landing-files
+    trigger:
+      file_arrival:
+        urls:
+          - s3://lake/incoming/orders/
+          - aistor://archive/incoming/customers/
+        wait_after_last_change_seconds: 60
+        event_names:
+          - s3:ObjectCreated:Put

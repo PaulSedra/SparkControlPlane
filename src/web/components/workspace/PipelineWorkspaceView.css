@@ -1,0 +1,157 @@
+.pipeline-workspace-view {
+  grid-area: canvas;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.pipeline-workspace-header,
+.pipeline-workspace-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--application-shell-border);
+  background: var(--bg);
+}
+
+.pipeline-workspace-header {
+  min-height: 54px;
+  padding: 8px 14px;
+}
+
+.pipeline-workspace-file {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.pipeline-workspace-file > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pipeline-workspace-file strong,
+.pipeline-workspace-file span,
+.pipeline-workspace-titlebar strong,
+.pipeline-workspace-titlebar span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pipeline-workspace-file strong {
+  color: var(--text);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.pipeline-workspace-file > div > span,
+.pipeline-workspace-titlebar span {
+  color: #8da3ae;
+  font-size: 0.64rem;
+}
+
+.pipeline-workspace-file-icon {
+  display: inline-grid;
+  flex: 0 0 28px;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--application-shell-border);
+  border-radius: 3px;
+  background: var(--bg);
+  color: #9fb5bf;
+}
+
+.pipeline-workspace-readonly {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 5px;
+  color: #8da3ae;
+  font-size: 0.65rem;
+}
+
+.pipeline-workspace-titlebar {
+  min-height: 38px;
+  padding: 6px 14px;
+  background: var(--bg);
+}
+
+.pipeline-workspace-titlebar strong {
+  color: var(--text);
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+
+.pipeline-workspace-message,
+.pipeline-workspace-empty {
+  display: grid;
+  place-content: center;
+  gap: 7px;
+  min-height: 0;
+  padding: 24px;
+  color: #9fb1ba;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.pipeline-workspace-empty .app-icon {
+  justify-self: center;
+  color: #6e8792;
+}
+
+.pipeline-workspace-empty strong {
+  color: var(--text);
+  font-size: 0.78rem;
+}
+
+.pipeline-workspace-message.error {
+  color: #ed9ba1;
+}
+
+.pipeline-source-code {
+  min-height: 0;
+  overflow: auto;
+  padding: 13px 0 28px;
+  background: var(--bg);
+  color: #e8ecf0;
+  counter-reset: source-line;
+  font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  font-size: 0.7rem;
+  line-height: 1.55;
+}
+
+.pipeline-source-line {
+  display: grid;
+  grid-template-columns: 48px minmax(max-content, 1fr);
+  min-width: max-content;
+  padding-right: 22px;
+}
+
+.pipeline-source-line > span {
+  padding-right: 12px;
+  color: #526770;
+  text-align: right;
+  user-select: none;
+}
+
+.pipeline-source-line > code {
+  min-width: 0;
+  white-space: pre;
+}
+
+.pipeline-source-line.active {
+  background: rgba(59, 140, 184, 0.16);
+}
+
+.pipeline-source-line.active > span {
+  color: var(--accent);
+}

@@ -1,0 +1,17 @@
+triggerDefinition:
+  configuration:
+    eventType: job.completed
+    source: warehouse
+  mode: incremental
+  name: test-trigger
+  pipelineId: pipeline-1
+  type: WEBHOOK
+
+canonicalTriggerEvent:
+  attributes: {}
+  deduplicationKey: warehouse:test-event
+  eventId: test-event
+  eventType: job.completed
+  occurredAt: "2026-09-08T12:00:00.000Z"
+  payload: {}
+  source: warehouse

@@ -1,0 +1,51 @@
+definition:
+  callerMetadata:
+    owner: scheduler
+  configuration:
+    cron: "*/5 * * * *"
+    timeZone: UTC
+  name: every-five-minutes
+  nodeNames:
+    - example.orders
+  type: SCHEDULE
+outcome:
+  detail: queued by the scheduler
+  eventId: schedule-1
+  occurredAt: "2026-09-08T12:00:00.000Z"
+  runId: run-1
+  status: ACCEPTED
+fileTrigger:
+  configuration:
+    path: incoming/
+  name: incoming-files
+  type: FILE_ARRIVAL
+event:
+  attributes:
+    bucket: lake
+    key: incoming/orders.json
+  deduplicationKey: lake:incoming/orders.json:etag-1
+  eventId: file-event-1
+  eventType: file.arrived
+  occurredAt: "2026-09-08T12:00:00.000Z"
+  payload:
+    bucket: lake
+    key: incoming/orders.json
+  source: aistor
+duplicateEventId: file-event-2
+eventIdReuse:
+  first:
+    attributes: {}
+    deduplicationKey: first
+    eventId: event-1
+    eventType: test
+    occurredAt: "2026-09-08T12:00:00.000Z"
+    payload: {}
+    source: test
+  second:
+    attributes: {}
+    deduplicationKey: second
+    eventId: event-1
+    eventType: test
+    occurredAt: "2026-09-08T12:00:00.000Z"
+    payload: {}
+    source: test

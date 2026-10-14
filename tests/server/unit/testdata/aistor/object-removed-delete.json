@@ -1,0 +1,20 @@
+{
+  "Records": [
+    {
+      "awsRegion": "us-east-1",
+      "eventName": "s3:ObjectRemoved:Delete",
+      "eventSource": "minio:s3",
+      "eventTime": "2026-09-08T11:57:00.000Z",
+      "s3": {
+        "bucket": {
+          "arn": "arn:aws:s3:::lake",
+          "name": "lake"
+        },
+        "object": {
+          "key": "incoming%2Fdeleted.json",
+          "versionId": "deleted-version-1"
+        }
+      }
+    }
+  ]
+}

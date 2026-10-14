@@ -1,0 +1,137 @@
+.catalog-main-header {
+  display: flex;
+  align-items: center;
+}
+
+.catalog-main-header {
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 94px;
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid var(--application-shell-border);
+}
+
+.catalog-heading-copy {
+  min-width: 0;
+}
+
+.catalog-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--accent);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.catalog-breadcrumbs span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.catalog-title-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  margin-top: 0;
+}
+
+.catalog-breadcrumbs + .catalog-title-row {
+  margin-top: 8px;
+}
+
+.catalog-title-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--application-shell-border);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--accent);
+}
+
+.catalog-title-row h1 {
+  margin: 0;
+}
+
+.catalog-title-row p {
+  margin: 0;
+}
+
+.catalog-title-row h1 {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 1.08rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catalog-title-row p {
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catalog-header-actions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.catalog-tabs {
+  display: flex;
+  align-items: end;
+  gap: 2px;
+  min-height: 35px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--application-shell-border);
+}
+
+.catalog-tabs button {
+  min-height: 35px;
+  padding: 5px 10px 7px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.catalog-tabs button:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.catalog-tabs button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+@media (max-width: 720px) {
+
+  .catalog-main-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .catalog-header-actions {
+    width: 100%;
+  }
+
+  .catalog-tabs {
+    overflow-x: auto;
+  }
+
+}

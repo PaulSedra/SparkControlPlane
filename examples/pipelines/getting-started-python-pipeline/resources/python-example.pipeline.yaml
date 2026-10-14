@@ -1,0 +1,7 @@
+name: Getting Started Python Pipeline
+storage: file:///tmp/spark-control-plane-demo-checkpoints/python-example
+catalog: spark_catalog
+database: default
+libraries:
+  - glob:
+      include: ../python/**

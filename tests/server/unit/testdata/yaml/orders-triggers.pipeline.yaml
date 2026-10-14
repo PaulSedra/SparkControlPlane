@@ -1,0 +1,27 @@
+name: Orders Pipeline
+storage: s3://checkpoints/orders
+timeout_seconds: 7200
+triggers:
+  - name: nightly-orders
+    mode: incremental
+    caller_metadata:
+      owner: data-platform
+    schedule:
+      cron: "0 2 * * *"
+      timezone_id: America/New_York
+      pause_status: UNPAUSED
+  - name: incoming-orders
+    trigger:
+      pause_status: PAUSED
+      file_arrival:
+        url: s3://lake/incoming/orders/
+        wait_after_last_change_seconds: 12
+        event_names:
+          - s3:ObjectCreated:Put
+  - name: warehouse-orders
+    trigger:
+      webhook:
+        source: warehouse
+        event_type: order.created
+        attributes:
+          tenant: north

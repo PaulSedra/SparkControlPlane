@@ -1,0 +1,23 @@
+{
+  "Records": [
+    {
+      "awsRegion": "us-east-1",
+      "eventName": "s3:ObjectCreated:Put",
+      "eventSource": "minio:s3",
+      "eventTime": "2026-09-08T11:59:00.000Z",
+      "s3": {
+        "bucket": {
+          "arn": "arn:aws:s3:::lake",
+          "name": "lake"
+        },
+        "object": {
+          "contentType": "application/json",
+          "eTag": "etag-1",
+          "key": "incoming%2Forders+one.json",
+          "size": 42,
+          "versionId": "version-1"
+        }
+      }
+    }
+  ]
+}

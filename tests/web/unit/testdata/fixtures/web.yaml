@@ -1,0 +1,28 @@
+pipelineSpec:
+  catalog: dev
+  database: operations
+  libraries: []
+  name: Pipeline
+  schema: operations
+  specPath: resources/pipeline.pipeline.yaml
+  storage: storage
+
+pipelineDetail:
+  edges: []
+  id: pipeline-1
+  name: Pipeline
+  recentRuns: []
+  runs: []
+  sourceFiles: []
+  sourceHash: hash
+  specPath: resources/pipeline.pipeline.yaml
+  status: DEPLOYED
+  validationMessages: []
+
+sparkSnapshot:
+  applications: []
+  jobs: []
+  source: monitoring-api
+  sql: []
+  stages: []
+  version: "4.0.0"

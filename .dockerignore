@@ -1,0 +1,17 @@
+.git
+.codex
+.env
+.env.*
+.spark-control-plane
+.venv
+node_modules
+dist
+tmp
+__pycache__
+*.py[cod]
+*.log
+Dockerfile*
+compose*.yaml
+pipelines
+secrets
+coverage

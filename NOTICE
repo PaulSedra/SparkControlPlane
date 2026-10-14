@@ -1,0 +1,37 @@
+Spark Control Plane
+Copyright 2026 and onward Paul Sedra
+
+This file records third-party attributions for this distribution. It is
+informational and does not modify the Apache License 2.0 terms in LICENSE.
+
+Apache Spark logo artwork
+
+The file src/web/public/apache-spark-wordmark.svg is an exact copy of the
+Apache Spark logo vector attributed to the Apache Software Foundation and
+published at:
+https://commons.wikimedia.org/wiki/File:Apache_Spark_logo.svg
+The original artwork is licensed under the Apache License, Version 2.0.
+
+The file src/web/public/apache-spark-wordmark-dark.svg is a recolored version
+of that artwork. The demo screenshots in docs/screenshots/ show the wordmark
+as it appears in the application.
+
+The source and rights for src/web/public/apache-spark-icon.svg are not recorded
+in this repository. This project makes no copyright claim or additional
+license grant for that file.
+
+Apache Spark and the Spark logo are trademarks of the Apache Software
+Foundation (ASF). Apache License 2.0 does not grant trademark rights. Use of
+these marks remains subject to ASF trademark guidance:
+https://spark.apache.org/trademarks.html
+https://www.apache.org/foundation/marks/faq/
+
+Spark Control Plane is an independent project and is not affiliated with,
+endorsed by, or sponsored by the ASF.
+
+Third-party dependencies
+
+Third-party packages remain under their respective upstream licenses. The
+production dependency versions and license identifiers are recorded in
+package-lock.json; the current production dependency tree lists MIT, ISC, and
+Python-2.0 licenses.

@@ -1,0 +1,7 @@
+name: Orders Pipeline
+storage: s3://checkpoints/orders
+triggers:
+  - name: nightly-orders
+    schedule:
+      quartz_cron_expression: "0 0 2 * * ?"
+      timezone_id: UTC

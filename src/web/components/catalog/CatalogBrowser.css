@@ -1,0 +1,285 @@
+.catalog-browser {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-right: 1px solid var(--application-shell-border);
+  background: var(--panel);
+}
+
+.catalog-browser-header {
+  display: flex;
+  align-items: center;
+}
+
+.catalog-search {
+  display: flex;
+  align-items: center;
+}
+
+.catalog-browser-header {
+  display: grid;
+  gap: 0;
+  align-content: start;
+}
+
+.catalog-browser-body {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 7px 16px;
+  scrollbar-color: #40515a transparent;
+  scrollbar-width: thin;
+}
+
+.catalog-tree-list {
+  min-width: 0;
+}
+
+.catalog-tree-entry {
+  min-width: 0;
+}
+
+.catalog-tree-empty {
+  padding: 7px;
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.catalog-tree-children--assets {
+  padding-bottom: 2px;
+}
+
+.catalog-browser-header {
+  justify-content: space-between;
+  min-height: 42px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--application-shell-border);
+}
+
+.catalog-tree-item small {
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
+.catalog-search {
+  gap: 7px;
+  min-height: 31px;
+  margin: 9px 10px 7px;
+  padding: 0 8px;
+  border: 1px solid var(--application-shell-border);
+  border-radius: 3px;
+  background: var(--bg);
+  color: var(--muted);
+}
+
+.catalog-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(45, 154, 225, 0.16);
+}
+
+.catalog-search input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.72rem;
+}
+
+.catalog-search input::placeholder {
+  color: var(--muted);
+}
+
+.catalog-tree {
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 7px 16px;
+  scrollbar-color: #40515a transparent;
+  scrollbar-width: thin;
+}
+
+.catalog-tree-root-label {
+  display: flex;
+  align-items: center;
+}
+
+.catalog-tree-group-label {
+  display: flex;
+  align-items: center;
+}
+
+.catalog-tree-item {
+  display: flex;
+  align-items: center;
+}
+
+.catalog-tree-node {
+  display: flex;
+  align-items: center;
+}
+
+.catalog-tree-root-label {
+  gap: 5px;
+  min-height: 28px;
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.catalog-tree-group-label {
+  gap: 5px;
+  min-height: 28px;
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.catalog-tree-root-label {
+  padding: 0 5px;
+}
+
+.catalog-tree-group-label {
+  padding: 0 5px 0 3px;
+  color: #92a5b1;
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.catalog-tree-branch {
+  margin-left: 12px;
+  padding-left: 9px;
+  border-left: 1px solid var(--application-shell-border);
+}
+
+.catalog-tree-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 28px;
+  border-radius: 3px;
+}
+
+.catalog-tree-expander {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 0.71rem;
+  text-align: left;
+}
+
+.catalog-tree-item {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 0.71rem;
+  text-align: left;
+}
+
+.catalog-tree-node {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 0.71rem;
+  text-align: left;
+}
+
+.catalog-tree-expander {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 23px;
+  width: 23px;
+  height: 26px;
+  padding: 0;
+  color: #7d929d;
+}
+
+.catalog-tree-item {
+  flex: 1 1 auto;
+  gap: 6px;
+  min-width: 0;
+  min-height: 26px;
+  padding: 4px 5px 4px 1px;
+  color: var(--text);
+}
+
+.catalog-tree-item span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catalog-tree-node span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catalog-tree-item small {
+  margin-left: auto;
+  padding-left: 4px;
+}
+
+.catalog-tree-item:hover {
+  color: #f0f5f7;
+}
+
+.catalog-tree-expander:hover {
+  color: #f0f5f7;
+}
+
+.catalog-tree-node:hover {
+  color: #f0f5f7;
+}
+
+.catalog-tree-children {
+  display: grid;
+  gap: 1px;
+  margin-left: 15px;
+  padding: 1px 0 2px 12px;
+  border-left: 1px solid var(--application-shell-border);
+}
+
+.catalog-tree-node {
+  gap: 6px;
+  min-width: 0;
+  min-height: 26px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  color: var(--text);
+}
+
+.catalog-tree-loading {
+  height: 24px;
+  margin: 2px 7px;
+  border-top: 1px solid var(--application-shell-border);
+  border-bottom: 1px solid var(--application-shell-border);
+  opacity: 0.65;
+}
+
+.catalog-tree-error {
+  padding: 5px 7px;
+  color: var(--danger);
+  font-size: 0.66rem;
+}
+
+.catalog-tree-blank {
+  min-height: 180px;
+  border-top: 1px solid var(--application-shell-border);
+  opacity: 0.5;
+}
+
+@media (max-width: 720px) {
+
+  .catalog-browser {
+    max-height: 310px;
+    border-right: 0;
+    border-bottom: 1px solid var(--application-shell-border);
+  }
+
+}

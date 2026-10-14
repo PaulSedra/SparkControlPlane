@@ -1,0 +1,97 @@
+# Disposable local demo stack. Defaults are intentionally local-only.
+name: spark-control-plane-demo
+
+services:
+  postgres:
+    image: postgres:16.4-bookworm
+    environment:
+      POSTGRES_DB: spark_control_plane
+      POSTGRES_USER: spark_control_plane
+      POSTGRES_PASSWORD: local-development-only
+    volumes:
+      - demo-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  spark-connect:
+    image: apache/spark:4.2.0-python3
+    environment:
+      HOME: /tmp
+      PYTHONPATH: /opt/spark/python:/opt/spark/python/lib/py4j-0.10.9.9-src.zip
+      PYSPARK_PYTHON: /usr/bin/python3
+      SPARK_LOCAL_DIRS: /tmp/spark-local
+      SPARK_LOCAL_IP: spark-connect
+      SPARK_NO_DAEMONIZE: "1"
+    command:
+      - /opt/spark/sbin/start-connect-server.sh
+      - --wait
+      - --conf
+      - spark.sql.catalogImplementation=in-memory
+      - --conf
+      - spark.sql.defaultCatalog=spark_catalog
+      - --conf
+      - spark.sql.warehouse.dir=file:///tmp/spark-control-plane-demo-warehouse
+      - --conf
+      - spark.driver.bindAddress=0.0.0.0
+      - --conf
+      - spark.driver.host=spark-connect
+    expose:
+      - "15002"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/15002'"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
+
+  control-plane:
+    build:
+      context: .
+      args:
+        APP_VERSION: 0.1.0
+        NODE_IMAGE: node:24.19.0-bookworm-slim
+        PYTHON_IMAGE: python:3.12-slim-bookworm
+        PYSPARK_VERSION: 4.2.0
+    image: spark-control-plane:demo
+    depends_on:
+      postgres:
+        condition: service_healthy
+      spark-connect:
+        condition: service_healthy
+    environment:
+      CONTROL_PLANE_HOST: 0.0.0.0
+      CONTROL_PLANE_PORT: 8080
+      CATALOG_BACKEND: spark
+      AISTOR_WEBHOOK_TOKEN: local-development-only
+      PIPELINES_DIR: /app/pipelines
+      PYTHON_EXECUTABLE: /usr/local/bin/python
+      PYSPARK_PYTHON: /usr/local/bin/python
+      PYSPARK_DRIVER_PYTHON: /usr/local/bin/python
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DATABASE: spark_control_plane
+      POSTGRES_USER: spark_control_plane
+      POSTGRES_PASSWORD: local-development-only
+      POSTGRES_SSLMODE: disable
+      POSTGRES_SCHEMA: public
+      SPARK_CONNECT_URL: sc://spark-connect:15002
+    ports:
+      - "127.0.0.1::8080"
+    volumes:
+      - type: bind
+        source: ./examples/pipelines
+        target: /app/pipelines
+        read_only: true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "docker/control-plane-healthcheck.mjs"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
+
+volumes:
+  demo-postgres-data:

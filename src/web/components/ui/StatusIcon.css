@@ -1,0 +1,19 @@
+.status-icon--succeeded {
+  color: var(--status-icon-succeeded-color);
+}
+
+.status-icon--running {
+  color: var(--status-icon-running-color);
+}
+
+.status-icon--failed {
+  color: var(--status-icon-failed-color);
+}
+
+.status-icon--canceled {
+  color: var(--status-icon-canceled-color);
+}
+
+.status-icon--unknown {
+  color: var(--status-icon-unknown-color);
+}

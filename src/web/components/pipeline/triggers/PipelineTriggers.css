@@ -1,0 +1,123 @@
+.pipeline-triggers-loading {
+  height: 54px;
+  border: 1px solid var(--application-shell-border);
+  background: linear-gradient(90deg, var(--bg), var(--nav), var(--bg));
+  background-size: 220% 100%;
+  animation: pipeline-triggers-loading-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pipeline-triggers-loading-pulse {
+  0%, 100% { background-position: 0 0; }
+  50% { background-position: 100% 0; }
+}
+
+.pipeline-triggers-message {
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.pipeline-triggers-message.error {
+  color: var(--danger);
+}
+
+.pipeline-trigger-list {
+  display: grid;
+  gap: 10px;
+}
+
+.pipeline-trigger-card {
+  display: grid;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--application-shell-border);
+}
+
+.pipeline-trigger-card:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.pipeline-trigger-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.pipeline-trigger-heading > .app-icon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--muted);
+}
+
+.pipeline-trigger-title {
+  color: var(--text);
+  font-size: 0.7rem;
+  font-weight: 750;
+  min-width: 0;
+}
+
+.pipeline-trigger-details,
+.pipeline-trigger-next-run,
+.pipeline-trigger-actions,
+.pipeline-trigger-last-outcome {
+  margin-left: 23px;
+  font-size: 0.65rem;
+}
+
+.pipeline-trigger-details {
+  display: grid;
+  gap: 3px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.pipeline-trigger-next-run {
+  color: var(--muted);
+}
+
+.pipeline-trigger-last-outcome {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.pipeline-trigger-last-outcome.failed {
+  color: var(--danger);
+}
+
+.pipeline-trigger-last-outcome.running {
+  color: var(--warning);
+}
+
+.pipeline-trigger-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.pipeline-trigger-action {
+  min-height: 26px;
+  padding: 3px 8px;
+  border: 1px solid var(--application-shell-border);
+  border-radius: 3px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.65rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.pipeline-trigger-action:hover,
+.pipeline-trigger-action:focus-visible {
+  border-color: #5c7483;
+}
+
+.pipeline-trigger-action:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+

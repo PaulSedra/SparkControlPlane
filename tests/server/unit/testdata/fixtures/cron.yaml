@@ -1,0 +1,75 @@
+parse:
+  - name: accepts numeric values, lists, ranges, and steps
+    input:
+      cron: "5,10-14/2 0-6/2 * 1,6-8 0,7"
+      timeZone: UTC
+    expected:
+      cron: "5,10-14/2 0-6/2 * 1,6-8 0,7"
+      misfirePolicy: CATCH_UP_ONCE
+      timeZone: UTC
+
+reject:
+  - name: rejects named fields
+    input:
+      cron: "0 0 * * MON"
+      timeZone: UTC
+    errorIncludes: numeric values only
+
+  - name: rejects six fields
+    input:
+      cron: "0 0 * * * *"
+      timeZone: UTC
+    errorIncludes: five fields
+
+  - name: rejects invalid time zones
+    input:
+      cron: "0 0 * * *"
+      timeZone: Not/AZone
+    errorIncludes: valid IANA time-zone name
+
+  - name: rejects unsupported misfire policies
+    input:
+      cron: "0 0 * * *"
+      misfirePolicy: CATCH_UP_ALL
+      timeZone: UTC
+    errorIncludes: Unsupported schedule misfirePolicy
+
+occurrences:
+  - name: uses the configured local time zone
+    configuration:
+      cron: "0 8 * * *"
+      timeZone: America/New_York
+    now: "2026-09-08T12:00:30.000Z"
+    expected:
+      latest:
+        at: "2026-09-08T12:00:00.000Z"
+        localTime: "2026-09-08T08:00"
+      next:
+        at: "2026-09-09T12:00:00.000Z"
+
+  - name: matches the first day of the month when both day fields are restricted
+    configuration:
+      cron: "0 9 1 * 1"
+      timeZone: UTC
+    now: "2026-02-01T09:00:00.000Z"
+    expected:
+      latest:
+        at: "2026-02-01T09:00:00.000Z"
+
+  - name: matches Monday when both day fields are restricted
+    configuration:
+      cron: "0 9 1 * 1"
+      timeZone: UTC
+    now: "2026-02-02T09:00:00.000Z"
+    expected:
+      latest:
+        at: "2026-02-02T09:00:00.000Z"
+
+  - name: does not invent a nonexistent daylight-saving local time
+    configuration:
+      cron: "30 2 * * *"
+      timeZone: America/New_York
+    now: "2026-03-08T08:00:00.000Z"
+    expected:
+      latest:
+        at: "2026-03-07T07:30:00.000Z"

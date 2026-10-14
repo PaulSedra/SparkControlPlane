@@ -1,0 +1,73 @@
+{
+  "receivedAt": "2026-09-08T12:00:00.000Z",
+  "representativePayloadCases": [
+    {
+      "encodedObjectKey": "incoming%2Forders+one.json",
+      "eventName": "s3:ObjectCreated:Put",
+      "fixture": "aistor/object-created-put.json",
+      "name": "object-created-put with an encoded key",
+      "objectKey": "incoming/orders one.json",
+      "occurredAt": "2026-09-08T11:59:00.000Z",
+      "versionId": "version-1"
+    },
+    {
+      "encodedObjectKey": "incoming%2Fcopied.json",
+      "eventName": "s3:ObjectCreated:Copy",
+      "fixture": "aistor/object-created-copy.json",
+      "name": "object-created-copy",
+      "objectKey": "incoming/copied.json",
+      "occurredAt": "2026-09-08T11:58:00.000Z",
+      "versionId": null
+    },
+    {
+      "encodedObjectKey": "incoming%2Fdeleted.json",
+      "eventName": "s3:ObjectRemoved:Delete",
+      "fixture": "aistor/object-removed-delete.json",
+      "name": "object-removed-delete",
+      "objectKey": "incoming/deleted.json",
+      "occurredAt": "2026-09-08T11:57:00.000Z",
+      "versionId": "deleted-version-1"
+    },
+    {
+      "encodedObjectKey": "archive%2Forders%2F2026.json",
+      "eventName": "s3:ObjectCreated:CompleteMultipartUpload",
+      "fixture": "aistor/versioned-object.json",
+      "name": "versioned multipart object",
+      "objectKey": "archive/orders/2026.json",
+      "occurredAt": "2026-09-08T11:56:00.000Z",
+      "versionId": "version-42"
+    }
+  ],
+  "multipleRecordsExpected": {
+    "length": 2,
+    "recordIndexes": ["0", "1"],
+    "objectKeys": ["incoming/first.json", "incoming/second.json"],
+    "eventNames": [
+      "s3:ObjectCreated:Put",
+      "s3:ObjectRemoved:DeleteMarkerCreated"
+    ]
+  },
+  "deduplicationInput": {
+    "Records": [
+      {
+        "eventName": "s3:ObjectCreated:Put",
+        "s3": {
+          "bucket": {
+            "name": "lake"
+          },
+          "object": {
+            "key": "incoming/orders.json"
+          }
+        }
+      }
+    ]
+  },
+  "malformedInput": {
+    "Records": [
+      {
+        "eventName": "s3:ObjectCreated:Put"
+      }
+    ]
+  },
+  "emptyInput": {}
+}

@@ -1,0 +1,150 @@
+catalogMetadata:
+  - name: reads a normalized direct property
+    metadata:
+      format-version: "2"
+    expected: "2"
+  - name: reads Spark Table Properties output
+    metadata:
+      Table Properties: "[created-at=2026-07-05T18:21:53Z,format-version=2]"
+    expected: "2"
+  - name: is absent when metadata does not include it
+    metadata:
+      Provider: parquet
+    expected: null
+
+pipelineCatalogTargets:
+  - name: uses fully qualified node names
+    nodeName: dev.operations.customer_score
+    spec: {}
+    expected:
+      catalog: dev
+      schema: operations
+      table: customer_score
+  - name: uses pipeline defaults for shorter names
+    nodeName: operations.customer_score
+    spec:
+      catalog: dev
+    expected:
+      catalog: dev
+      schema: operations
+      table: customer_score
+  - name: stays unavailable without a catalog
+    nodeName: operations.customer_score
+    spec:
+      catalog: ""
+    expected: null
+
+pipelineNodeTypeLabels:
+  - nodeType: MATERIALIZED_VIEW
+    expected: Materialized view
+  - nodeType: STREAMING_TABLE
+    expected: Streaming Table
+  - nodeType: TEMPORARY_VIEW
+    expected: Temporary view
+
+pipelineRunTiming:
+  durationCases:
+    - name: active nodes count up from their registry start timestamp
+      node:
+        status: RUNNING
+        startedAt: "2026-08-25T12:00:00.000Z"
+      now: "2026-08-25T12:00:10.000Z"
+      expected: 10000
+    - name: active nodes advance when the current time advances
+      node:
+        status: RUNNING
+        startedAt: "2026-08-25T12:00:00.000Z"
+      now: "2026-08-25T12:00:11.000Z"
+      expected: 11000
+    - name: terminal duration takes precedence
+      node:
+        completedAt: "2026-08-25T12:00:12.500Z"
+        durationMs: 8250
+        startedAt: "2026-08-25T12:00:00.000Z"
+        status: COMPLETED
+      now: "2026-08-25T12:00:10.000Z"
+      expected: 8250
+    - name: terminal duration remains stable as time advances
+      node:
+        completedAt: "2026-08-25T12:00:12.500Z"
+        durationMs: 8250
+        startedAt: "2026-08-25T12:00:00.000Z"
+        status: COMPLETED
+      now: "2026-08-25T12:01:10.000Z"
+      expected: 8250
+    - name: terminal timestamps provide a fallback when persisted duration is absent
+      node:
+        completedAt: "2026-08-25T12:00:12.500Z"
+        startedAt: "2026-08-25T12:00:00.000Z"
+        status: FAILED
+      now: "2026-08-25T12:00:10.000Z"
+      expected: 12500
+    - name: missing timestamps remain unavailable
+      node:
+        status: RUNNING
+      now: "2026-08-25T12:00:10.000Z"
+      expected: null
+    - name: malformed timestamps remain unavailable
+      node:
+        status: RUNNING
+        startedAt: not-a-date
+      now: "2026-08-25T12:00:10.000Z"
+      expected: null
+    - name: missing completion start remains unavailable
+      node:
+        completedAt: "2026-08-25T12:00:12.500Z"
+        status: COMPLETED
+      now: "2026-08-25T12:00:10.000Z"
+      expected: null
+    - name: zero is a valid terminal duration
+      node:
+        durationMs: 0
+        status: COMPLETED
+      now: "2026-08-25T12:00:10.000Z"
+      expected: 0
+    - name: active elapsed time clamps at zero
+      node:
+        status: RUNNING
+        startedAt: "2026-08-25T12:00:00.000Z"
+      now: "2026-08-25T11:59:59.999Z"
+      expected: 0
+  activeRun:
+    nodeStatuses:
+      catalog.node:
+        lastUpdatedAt: "2026-08-25T12:00:00.000Z"
+        qualifiedName: catalog.node
+        startedAt: "2026-08-25T12:00:00.000Z"
+        status: RUNNING
+    status: SUCCEEDED
+
+pipelineTriggerPresentation:
+  - name: reports Manual when only inactive definitions remain
+    pipelineId: pipeline-1
+    triggers:
+      - active: false
+        pipelineId: pipeline-1
+        type: SCHEDULE
+    expected: Manual
+  - name: reports Schedule and ignores duplicate or unrelated triggers
+    pipelineId: pipeline-1
+    triggers:
+      - active: true
+        pipelineId: pipeline-1
+        type: SCHEDULE
+      - active: true
+        pipelineId: pipeline-1
+        type: SCHEDULE
+      - active: true
+        pipelineId: pipeline-2
+        type: WEBHOOK
+    expected: Schedule
+  - name: reports active file and webhook types
+    pipelineId: pipeline-1
+    triggers:
+      - active: true
+        pipelineId: pipeline-1
+        type: FILE_ARRIVAL
+      - active: true
+        pipelineId: pipeline-1
+        type: WEBHOOK
+    expected: File arrival, Webhook

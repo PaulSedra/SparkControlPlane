@@ -1,0 +1,9 @@
+now: "2026-09-08T12:00:30.000Z"
+configuration:
+  cron: "0 8 * * *"
+  timeZone: America/New_York
+triggers:
+  successfulDelivery: morning-run
+  failedDelivery: failed-morning-run
+  replayableDelivery: replayable-morning-run
+failureMessage: pipeline is not deployed

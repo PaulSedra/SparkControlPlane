@@ -1,0 +1,97 @@
+{
+  "missingApplication": {
+    "version": {
+      "spark": "4.0.0"
+    },
+    "applications": [
+      {
+        "id": "other-app",
+        "name": "Other application"
+      }
+    ]
+  },
+  "unscoped": {
+    "version": {
+      "spark": "4.0.0"
+    },
+    "applications": [
+      {
+        "id": "first-app",
+        "name": "First application"
+      }
+    ],
+    "jobs": [],
+    "stages": [],
+    "sql": []
+  },
+  "runScoped": {
+    "sessionId": "run-123",
+    "version": {
+      "spark": "4.1.3"
+    },
+    "applications": [
+      {
+        "id": "spark-connect-app",
+        "name": "spark-connect"
+      },
+      {
+        "id": "spark-thrift-app",
+        "name": "spark-thrift"
+      }
+    ],
+    "jobs": [
+      {
+        "jobId": 1,
+        "description": "unrelated session",
+        "jobTags": [
+          "other-session"
+        ]
+      },
+      {
+        "jobId": 2,
+        "description": "Spark Connect session run-123",
+        "jobTags": [
+          "SparkConnect_OperationTag_User__Session_run-123"
+        ],
+        "stageIds": [
+          7,
+          8
+        ]
+      }
+    ],
+    "stageDetails": {
+      "7": {
+        "stageId": 7,
+        "status": "ACTIVE",
+        "details": "session_id: \"run-123\""
+      },
+      "8": {
+        "stageId": 8,
+        "status": "ACTIVE",
+        "details": "other-session"
+      }
+    },
+    "stages": [
+      {
+        "stageId": 7,
+        "status": "ACTIVE",
+        "details": "session_id: \"run-123\""
+      },
+      {
+        "stageId": 9,
+        "status": "ACTIVE",
+        "details": "other-session"
+      }
+    ],
+    "sql": [
+      {
+        "executionId": 1,
+        "description": "session_id: run-123"
+      },
+      {
+        "executionId": 2,
+        "description": "other-session"
+      }
+    ]
+  }
+}

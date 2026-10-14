@@ -1,0 +1,124 @@
+.catalog-tree-row.selected {
+  background: var(--accent-soft);
+}
+
+.catalog-tree-item .app-icon {
+  flex: 0 0 auto;
+  color: #8fa7b5;
+}
+
+.catalog-tree-node .app-icon {
+  flex: 0 0 auto;
+  color: #8fa7b5;
+}
+
+.catalog-tree-node.selected {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.catalog-tree-node.selected .app-icon {
+  color: var(--accent);
+}
+
+.catalog-breadcrumbs .app-icon {
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.catalog-secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 29px;
+  padding: 4px 9px;
+  border: 1px solid var(--application-shell-border);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.7rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.catalog-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 29px;
+  padding: 4px 9px;
+  border: 1px solid var(--application-shell-border);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.7rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.catalog-secondary-button:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.catalog-icon-button:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.catalog-icon-button {
+  width: 30px;
+  padding-inline: 0;
+}
+
+.catalog-tabs button.active {
+  color: var(--text);
+}
+
+.catalog-tabs button.active {
+  border-bottom-color: var(--accent);
+}
+
+.catalog-notice.error {
+  border-color: #6f3740;
+  background: rgba(91, 30, 39, 0.35);
+  color: var(--danger);
+}
+
+.catalog-detail-content .catalog-metadata-row dd {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.catalog-status-row .status-icon--succeeded {
+  color: var(--success);
+}
+
+.catalog-status-row .status-icon--failed {
+  color: var(--danger);
+}
+
+.catalog-status-row .status-icon--running {
+  color: #e0a43d;
+}
+
+@media (max-width: 1150px) {
+
+  .catalog-header-actions .catalog-secondary-button {
+    padding-inline: 7px;
+  }
+
+  .catalog-header-actions .catalog-secondary-button .app-icon:last-child {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+
+  .catalog-header-actions .catalog-secondary-button {
+    flex: 1 1 auto;
+  }
+
+}

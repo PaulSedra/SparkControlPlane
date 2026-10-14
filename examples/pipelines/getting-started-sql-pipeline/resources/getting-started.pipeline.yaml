@@ -1,0 +1,7 @@
+name: Getting Started SQL Pipeline
+storage: file:///tmp/spark-control-plane-demo-checkpoints/getting-started
+catalog: spark_catalog
+database: default
+libraries:
+  - glob:
+      include: ../sql/**

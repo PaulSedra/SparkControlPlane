@@ -1,0 +1,367 @@
+:root[data-theme='light'] .application-shell {
+  --panel-soft: var(--panel);
+  --application-shell-border: var(--nav);
+  color-scheme: light;
+}
+
+:root[data-theme='light'] .application-shell .db-top-bar {
+  background: var(--nav);
+}
+
+:root[data-theme='light'] .application-shell .global-search {
+  border-color: var(--application-shell-border);
+  background: #f7f9fb;
+  color: #607086;
+}
+
+:root[data-theme='light'] .application-shell .sidebar-toggle:hover,
+:root[data-theme='light'] .application-shell .sidebar-toggle:focus-visible {
+  background: #ebe8eb;
+  color: #1f2937;
+}
+
+:root[data-theme='light'] .application-shell .sidebar-toggle:hover .app-icon,
+:root[data-theme='light'] .application-shell .sidebar-toggle:focus-visible .app-icon {
+  color: #1f2937;
+}
+
+:root[data-theme='light'] .application-shell .global-search input,
+:root[data-theme='light'] .application-shell .global-workspace-name {
+  color: #1f2937;
+}
+
+:root[data-theme='light'] .application-shell .global-search input::placeholder,
+:root[data-theme='light'] .application-shell .global-search kbd {
+  color: #607086;
+}
+
+:root[data-theme='light'] .application-shell .db-side-bar {
+  background: var(--nav);
+}
+
+:root[data-theme='light'] .application-shell .db-side-bar-link {
+  color: #344454;
+}
+
+:root[data-theme='light'] .application-shell .db-side-bar-link:hover {
+  background: #ebe8eb;
+  color: #1f2937;
+}
+
+:root[data-theme='light'] .application-shell .db-side-bar-link.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-runs-view,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-workspace-view,
+:root[data-theme='light'] .workspace-app-shell .pipeline-workspace-view {
+  background: #f7f9fb;
+}
+
+.application-shell.pipeline-app-shell .db-route-content {
+  background: var(--panel);
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-header,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-run-toolbar,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-runs-toolbar {
+  background: #ffffff;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-run-toolbar,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-runs-toolbar,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-header {
+  color: #607086;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .run-picker-button,
+:root[data-theme='light'] .pipeline-app-shell .run-picker-menu,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-run-menu,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-output-action-menu,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-selection-bar,
+:root[data-theme='light'] .pipeline-app-shell .dark-secondary-button,
+:root[data-theme='light'] .pipeline-app-shell .event-log-button {
+  border-color: var(--application-shell-border);
+  background: #ffffff;
+  color: #344454;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-output-action-menu button {
+  color: #344454;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .run-picker-menu button:hover,
+:root[data-theme='light'] .pipeline-app-shell .run-picker-menu button.selected,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-run-menu button:hover,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-run-menu button:focus-visible,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-output-action-menu button:hover,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-output-action-menu button:focus-visible,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-selection-action:hover,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-selection-action:focus-visible,
+:root[data-theme='light'] .pipeline-app-shell .dark-secondary-button:hover,
+:root[data-theme='light'] .pipeline-app-shell .event-log-button:hover {
+  background: var(--accent-soft);
+}
+
+:root[data-theme='light'] .pipeline-app-shell .refresh-tables-button.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-selection-count {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-selection-action,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-selection-clear {
+  color: #344454;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-selection-clear:hover,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-selection-clear:focus-visible {
+  border-color: #b2c6d4;
+  background: var(--accent-soft);
+  color: #1f2937;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-graph-frame .graph-view-tabs {
+  background: transparent;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-view-tabs {
+  border: 0;
+  background: transparent;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-view-tabs button {
+  color: #607086;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-view-tabs button.active {
+  background: #ffffff;
+  color: var(--accent);
+}
+
+:root[data-theme='light'] .pipeline-app-shell .dag-tools {
+  border-color: var(--application-shell-border);
+  background: rgba(255, 255, 255, 0.94);
+}
+
+:root[data-theme='light'] .pipeline-app-shell .dag-tools button:hover {
+  border-color: #b2c6d4;
+  background: var(--accent-soft);
+  color: #1f2937;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .dag-node {
+  border-color: #d5dfe4;
+  background: #ffffff;
+  color: #1f2937;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .dag-node.succeeded {
+  border-top-color: #4caf73;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .dag-node.running {
+  border-top-color: #c2872a;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .dag-node.failed {
+  border-top-color: #d95d66;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .asset-node.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px rgba(11, 99, 206, 0.24), 0 7px 18px rgba(31, 41, 55, 0.18);
+}
+
+:root[data-theme='light'] .pipeline-app-shell .node-title {
+  border-bottom-color: #e1e7ea;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .node-meta,
+:root[data-theme='light'] .pipeline-app-shell .node-footer {
+  color: #70818a;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .node-type-icon {
+  color: #52616d;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-workspace-header,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-workspace-titlebar,
+:root[data-theme='light'] .workspace-app-shell .pipeline-workspace-header,
+:root[data-theme='light'] .workspace-app-shell .pipeline-workspace-titlebar {
+  border-bottom-color: var(--application-shell-border);
+  background: #ffffff;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-workspace-titlebar,
+:root[data-theme='light'] .workspace-app-shell .pipeline-workspace-titlebar {
+  background: #f7f9fb;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-workspace-file strong,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-workspace-titlebar strong,
+:root[data-theme='light'] .workspace-app-shell .pipeline-workspace-file strong,
+:root[data-theme='light'] .workspace-app-shell .pipeline-workspace-titlebar strong {
+  color: #1f2937;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-workspace-file > div > span,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-workspace-titlebar span,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-workspace-readonly,
+:root[data-theme='light'] .workspace-app-shell .pipeline-workspace-file > div > span,
+:root[data-theme='light'] .workspace-app-shell .pipeline-workspace-titlebar span,
+:root[data-theme='light'] .workspace-app-shell .pipeline-workspace-readonly {
+  color: #607086;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-workspace-file-icon,
+:root[data-theme='light'] .workspace-app-shell .pipeline-workspace-file-icon {
+  border-color: var(--application-shell-border);
+  background: #edf1f3;
+  color: #52616d;
+}
+
+:root[data-theme='light'] .workspace-route-header {
+  background: #ffffff;
+}
+
+:root[data-theme='light'] .workspace-route-icon {
+  border-color: var(--application-shell-border);
+  background: #edf1f3;
+  color: #52616d;
+}
+
+:root[data-theme='light'] .workspace-route > .pipeline-workspace-view {
+  border-color: var(--application-shell-border);
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-source-code,
+:root[data-theme='light'] .workspace-app-shell .pipeline-source-code {
+  background: #ffffff;
+  color: #1f2937;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-source-line > span,
+:root[data-theme='light'] .workspace-app-shell .pipeline-source-line > span {
+  color: #8a9aa4;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-source-line.active,
+:root[data-theme='light'] .workspace-app-shell .pipeline-source-line.active {
+  background: var(--accent-soft);
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-source-line.active > span,
+:root[data-theme='light'] .workspace-app-shell .pipeline-source-line.active > span {
+  color: var(--accent);
+}
+
+:root[data-theme='light'] .pipeline-app-shell .asset-node-actions {
+  border-color: var(--application-shell-border);
+  background: #ffffff;
+  box-shadow: 0 7px 18px rgba(31, 41, 55, 0.16);
+}
+
+:root[data-theme='light'] .pipeline-app-shell .asset-node-source-button {
+  color: #607086;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .asset-node-source-button:hover,
+:root[data-theme='light'] .pipeline-app-shell .asset-node-source-button:focus-visible {
+  border-color: #b2c6d4;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+:root[data-theme='light'] .pipeline-app-shell .graph-minimap {
+  border-color: var(--application-shell-border);
+  background: #ffffff;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .graph-minimap-viewport {
+  border-color: var(--accent);
+  background: rgba(45, 154, 225, 0.12);
+}
+
+:root[data-theme='light'] .pipeline-app-shell .asset-count {
+  border-color: var(--application-shell-border);
+  background: rgba(255, 255, 255, 0.92);
+  color: #607086;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-details-rail,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-bottom-panel {
+  background: #ffffff;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-triggers-loading {
+  background: linear-gradient(90deg, #ffffff, #edf1f3, #ffffff);
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-trigger-title strong,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-trigger-details,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-trigger-action {
+  color: #1f2937;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-trigger-title span,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-trigger-next-run,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-trigger-actions,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-triggers-message:not(.error),
+:root[data-theme='light'] .pipeline-app-shell .pipeline-trigger-state.paused,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-trigger-heading > .app-icon {
+  color: #607086;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-triggers-message.error {
+  color: #c0352b;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-detail-row dt,
+:root[data-theme='light'] .pipeline-app-shell .bottom-panel-tabs button,
+:root[data-theme='light'] .pipeline-app-shell .bottom-panel-actions,
+:root[data-theme='light'] .pipeline-app-shell .bottom-panel-search,
+:root[data-theme='light'] .pipeline-app-shell .bottom-panel-select,
+:root[data-theme='light'] .pipeline-app-shell .bottom-panel-empty {
+  color: #607086;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-detail-row dd,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-runs-table td,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-output-table td,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-performance-table td {
+  color: #344454;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-output-table th {
+  color: #344454;
+}
+
+:root[data-theme='light'] .pipeline-app-shell .bottom-panel-search,
+:root[data-theme='light'] .pipeline-app-shell .bottom-panel-select {
+  border-color: var(--application-shell-border);
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-output-table th,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-output-table td,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-performance-table th,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-performance-table td,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-runs-table th,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-runs-table td {
+  border-bottom-color: var(--application-shell-border);
+}
+
+:root[data-theme='light'] .pipeline-app-shell .pipeline-output-table tbody tr:hover,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-performance-table tbody tr:hover,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-runs-table tbody tr:hover,
+:root[data-theme='light'] .pipeline-app-shell .pipeline-runs-table tbody tr.selected {
+  background: var(--accent-soft);
+}
