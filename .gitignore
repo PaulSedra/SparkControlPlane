@@ -12,7 +12,6 @@ pnpm-debug.log*
 .idea
 .spark-control-plane
 tmp
-package-lock.json
 coverage/
 .scannerwork/
 sonar-project.properties
