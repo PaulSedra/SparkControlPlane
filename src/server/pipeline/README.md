@@ -73,11 +73,13 @@ polling. The next explicit source refresh replaces that state with the YAML
 
 SQL library globs resolve to SQL and Python files. The local SQL parser
 recognizes materialized views, streaming tables, temporary views, flows, and
-`FROM`/`JOIN` dependencies. Its text-pattern lineage has low confidence. The
-installed Spark Connect pipeline protocol defines SQL graph elements but does
-not expose a compiled graph read-back command, so local SQL parsing supplies
-pre-run UI lineage. URI inputs such as s3a locations are labeled external
-sources, while external table references are labeled external tables.
+`FROM`/`JOIN` dependencies. In `FROM` clauses, Spark Declarative Pipelines'
+`STREAM(table_name)` and `STREAM table_name` forms resolve to the underlying
+table. Its text-pattern lineage has low confidence. The installed Spark Connect
+pipeline protocol defines SQL graph elements but does not expose a compiled
+graph read-back command, so local SQL parsing supplies pre-run UI lineage. URI
+inputs such as s3a locations are labeled external sources, while external table
+references are labeled external tables.
 
 Python discovery runs `spark/spark_pipeline_manifest.py` in the repository
 `.venv`. It imports pipeline definitions under a recording PySpark

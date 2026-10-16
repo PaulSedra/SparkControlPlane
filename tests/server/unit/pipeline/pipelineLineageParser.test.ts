@@ -56,6 +56,44 @@ test('extracts SQL FROM and JOIN dependencies for datasets and SQL flows', () =>
     ));
 });
 
+test('resolves both STREAM source forms to the qualified input table', () => {
+    const sourceFile = path.join(projectRoot, 'src', 'lineage.sql');
+    const sourceNodeId = 'dataset:finance.bronze.api_request';
+    const targetNodeId = 'dataset:finance.bronze.parsed_stock_split';
+    const streamSources = [
+        'STREAM(finance.bronze.api_request)',
+        'STREAM finance.bronze.api_request',
+    ];
+
+    for (const streamSource of streamSources) {
+        const sql = `CREATE STREAMING TABLE finance.bronze.parsed_stock_split AS SELECT * FROM ${streamSource};`;
+        const graph = parsePipelineLineage(projectRoot, spec, [{ content: sql, sourceFile }]);
+
+        assert.ok(graph.edges.some((edge) =>
+            edge.sourceNodeId === sourceNodeId && edge.targetNodeId === targetNodeId,
+        ), `expected ${streamSource} to create lineage from ${sourceNodeId}`);
+        assert.equal(
+            graph.nodes.some((node) =>
+                node.id === 'dataset:finance.bronze.stream' && node.nodeType === 'EXTERNAL_DATASET',
+            ),
+            false,
+            `expected ${streamSource} not to create a STREAM external dataset`,
+        );
+    }
+});
+
+test('keeps URI-backed SQL inputs classified as external sources', () => {
+    const sourceFile = path.join(projectRoot, 'src', 'lineage.sql');
+    const sql = 'CREATE MATERIALIZED VIEW example.silver.external AS SELECT * FROM delta.`s3a://warehouse/events`;';
+    const graph = parsePipelineLineage(projectRoot, spec, [{ content: sql, sourceFile }]);
+
+    assert.ok(graph.nodes.some((node) =>
+        node.id === 'dataset:s3a://warehouse/events' &&
+        node.nodeType === 'EXTERNAL_DATASET' &&
+        node.externalKind === 'SOURCE',
+    ));
+});
+
 test('omits recursive CTE names from SQL lineage while retaining source tables', () => {
     const sourceFile = path.join(projectRoot, 'src', 'lineage.sql');
     const sql = [

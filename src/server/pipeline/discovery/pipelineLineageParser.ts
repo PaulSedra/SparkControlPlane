@@ -431,16 +431,17 @@ function datasetDefinition(statement: string): SqlDatasetDefinition | undefined 
 
 function inputTableNames(statement: string): SqlInputReference[] {
     const ctes = cteNames(statement);
-    const matches = statement.matchAll(
-        /\b(?:FROM|JOIN)\s+(?:(?:[A-Za-z_]\w*\s*\.\s*)?[\x60]([A-Za-z][\w+.-]*:\/\/[^\x60]+)[\x60]|([\x60"\w.-]+))/gi,
-    );
+    const matches = statement.matchAll(/\b(?:FROM|JOIN)\s+/gi);
     const seen = new Set<string>();
     const inputs: SqlInputReference[] = [];
 
     for (const match of matches) {
-        const sourceUri = match[1];
+        const matchIndex = match.index ?? 0;
+        const inputStart = skipStreamKeyword(statement, matchIndex + match[0].length);
+        const inputToken = readSqlInputToken(statement, inputStart);
+        const sourceUri = sourceUriFromInputToken(inputToken);
         const externalKind = sourceUri == null ? 'TABLE' : 'SOURCE';
-        const inputName = sourceUri ?? cleanIdentifier(match[2] ?? '');
+        const inputName = sourceUri ?? cleanIdentifier(inputToken);
         if (inputName === '' ||
             (externalKind === 'TABLE' && ctes.has(inputName.toLowerCase())) ||
             seen.has(inputName.toLowerCase())) {
@@ -452,6 +453,91 @@ function inputTableNames(statement: string): SqlInputReference[] {
     }
 
     return inputs;
+}
+
+function skipStreamKeyword(statement: string, startIndex: number): number {
+    let index = startIndex;
+    if (statement.slice(index, index + 6).toUpperCase() !== 'STREAM') {
+        return index;
+    }
+
+    const afterKeyword = statement[index + 6];
+    if (afterKeyword !== '(' && (afterKeyword != null && !/\s/.test(afterKeyword))) {
+        return index;
+    }
+
+    index += 6;
+    while (index < statement.length && /\s/.test(statement[index])) {
+        index += 1;
+    }
+    if (statement[index] === '(') {
+        index += 1;
+        while (index < statement.length && /\s/.test(statement[index])) {
+            index += 1;
+        }
+    }
+    return index;
+}
+
+function readSqlInputToken(statement: string, startIndex: number): string {
+    let index = startIndex;
+    let quote: '`' | '"' | undefined;
+
+    while (index < statement.length) {
+        const character = statement[index];
+        if (quote != null) {
+            index += 1;
+            if (character === quote) {
+                if (statement[index] === quote) {
+                    index += 1;
+                } else {
+                    quote = undefined;
+                }
+            }
+            continue;
+        }
+
+        if (character === '`' || character === '"') {
+            quote = character;
+            index += 1;
+            continue;
+        }
+        if (/\s/.test(character) || character === ',' || character === ';' || character === '(' || character === ')') {
+            break;
+        }
+        index += 1;
+    }
+
+    return statement.slice(startIndex, index);
+}
+
+function sourceUriFromInputToken(inputToken: string): string | undefined {
+    const delimiterIndex = inputToken.indexOf('://');
+    if (delimiterIndex < 1) {
+        return undefined;
+    }
+
+    let schemeStart = delimiterIndex - 1;
+    while (schemeStart >= 0 && isUriSchemeCharacter(inputToken[schemeStart])) {
+        schemeStart -= 1;
+    }
+    schemeStart += 1;
+    if (schemeStart === delimiterIndex || !isUriSchemeLetter(inputToken[schemeStart])) {
+        return undefined;
+    }
+
+    return cleanIdentifier(inputToken.slice(schemeStart));
+}
+
+function isUriSchemeLetter(character: string | undefined): boolean {
+    return character != null &&
+        ((character >= 'A' && character <= 'Z') || (character >= 'a' && character <= 'z'));
+}
+
+function isUriSchemeCharacter(character: string | undefined): boolean {
+    return isUriSchemeLetter(character) ||
+        (character != null && character >= '0' && character <= '9') ||
+        character === '_' || character === '+' || character === '.' || character === '-';
 }
 
 function cteNames(statement: string): Set<string> {
