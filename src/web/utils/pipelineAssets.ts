@@ -114,7 +114,7 @@ function assetStatusForNodeRun(
     if (nodeStatus?.status === PipelineRunNodeStatus.UNKNOWN) {
         return PipelineAssetState.UNKNOWN;
     }
-    if (status !== StatusPresentationState.UNKNOWN) {
+    if (status != null && status !== StatusPresentationState.UNKNOWN) {
         return status;
     }
 

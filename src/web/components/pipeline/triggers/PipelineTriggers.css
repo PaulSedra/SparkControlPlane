@@ -89,7 +89,7 @@
 }
 
 .pipeline-trigger-last-outcome.running {
-  color: var(--warning);
+  color: var(--status-icon-running-color);
 }
 
 .pipeline-trigger-actions {

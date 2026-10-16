@@ -4,6 +4,20 @@
 
 .status-icon--running {
   color: var(--status-icon-running-color);
+  animation: status-icon-spin 1.2s linear infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.status-icon--waiting {
+  color: var(--status-icon-waiting-color);
+  animation: status-icon-spin 1.2s linear infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.status-icon--waiting path {
+  stroke-dasharray: 14 42;
 }
 
 .status-icon--failed {
@@ -16,4 +30,10 @@
 
 .status-icon--unknown {
   color: var(--status-icon-unknown-color);
+}
+
+@keyframes status-icon-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

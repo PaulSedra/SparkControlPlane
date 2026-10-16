@@ -6,14 +6,14 @@ the operator interface. Page and route ownership is described in
 
 ## Shared primitives
 
-| Component                      | Responsibility                                                                                                                                          |
-|--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `AppIcon`                      | Renders shared Lucide icons for brand, action, toolbar, input, node-type, and empty-state use with semantic sizing and accessible labels                |
-| `DataAssetIcon`                | Uses native Lucide `Table2` for tables and overlays `Eye` at lower right for views throughout Catalog and pipeline UI                                   |
-| `StatusIcon`                   | Maps canceled, failed, running, succeeded, and unknown states to shared icons and semantic colors; canceled node outcomes have a distinct neutral state |
-| `StatusPill` and `StatusBadge` | Combine status text with `StatusIcon`                                                                                                                   |
-| `EmptyState`                   | Presents valid zero-data and waiting states; actionable errors use notices                                                                              |
-| `GraphCanvas`                  | Owns graph pan, zoom, transformed viewport, pointer drag, wheel behavior, accessible canvas label, and optional footer                                  |
+| Component                      | Responsibility                                                                                                                           |
+|--------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|
+| `AppIcon`                      | Renders shared Lucide icons for brand, action, toolbar, input, node-type, and empty-state use with semantic sizing and accessible labels |
+| `DataAssetIcon`                | Uses native Lucide `Table2` for tables and overlays `Eye` at lower right for views throughout Catalog and pipeline UI                    |
+| `StatusIcon`                   | Maps waiting, canceled, failed, running, succeeded, and unknown states to shared icons and semantic colors                               |
+| `StatusPill` and `StatusBadge` | Combine status text with `StatusIcon`                                                                                                    |
+| `EmptyState`                   | Presents valid zero-data and waiting states; actionable errors use notices                                                               |
+| `GraphCanvas`                  | Owns graph pan, zoom, transformed viewport, pointer drag, wheel behavior, accessible canvas label, and optional footer                   |
 
 ## Pipeline graph and panels
 
@@ -22,7 +22,8 @@ the operator interface. Page and route ownership is described in
 status, durations, output records, empty state, asset count, and selected-run
 diagnostics. Status appears in an in-card strip; hover and selection change the
 node border without replacing that strip. Pointer exit clears the highlight
-without changing selection.
+without changing selection. A queued run shows “Waiting for resources” at the
+run level; queued nodes have no status icon until Spark reports node progress.
 
 The graph uses transitive reduction and deterministic ordering. Active
 connectors are painted after overlapping edges. Hovering the left half of a

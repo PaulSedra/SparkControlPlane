@@ -20,6 +20,10 @@ Cancellation has a separate visual state from failure. For legacy canceled
 runs, a `FAILED` node without a completion time is presented as canceled; a
 completed `FAILED` node remains failed.
 
+Queued runs use the waiting-for-resources presentation at the run level.
+Queued node records have no node-level status presentation until execution
+progress is reported.
+
 The `node.ts` projection may depend on run contracts. Run contracts do not
 depend on node or presentation modules. Trigger contracts remain independent
 of run and node lifecycles, while presentation adapters may depend on domain

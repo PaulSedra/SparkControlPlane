@@ -18,6 +18,7 @@ import {
     pipelineRunNodeStatusForRun,
 } from '../../../../src/shared/status/node.ts';
 import {
+    PIPELINE_RUN_STATUS_LABELS,
     STATUS_PRESENTATION_LABELS,
     pipelineAssetStateForIncomingFlows,
     sparkStatusPresentationState,
@@ -197,7 +198,7 @@ test('all terminal run outcomes map to their audit events and presentation state
 
 test('pipeline lifecycle presentation maps known run, node, and CLI states exhaustively', () => {
     const mappings: Array<[string, StatusPresentationState]> = [
-        [RunStatus.QUEUED, 'running'],
+        [RunStatus.QUEUED, 'waiting'],
         [RunStatus.SUBMITTING, 'running'],
         [RunStatus.RUNNING, 'running'],
         [RunStatus.SUCCEEDED, 'succeeded'],
@@ -205,7 +206,6 @@ test('pipeline lifecycle presentation maps known run, node, and CLI states exhau
         [RunStatus.CANCELED, 'canceled'],
         [RunStatus.TIMED_OUT, 'failed'],
         [RunStatus.UNKNOWN, 'unknown'],
-        [PipelineRunNodeStatus.QUEUED, 'running'],
         [PipelineRunNodeStatus.PLANNING, 'running'],
         [PipelineRunNodeStatus.STARTING, 'running'],
         [PipelineRunNodeStatus.RUNNING, 'running'],
@@ -225,6 +225,18 @@ test('pipeline lifecycle presentation maps known run, node, and CLI states exhau
     for (const [status, expected] of mappings) {
         assert.equal(statusPresentationForPipelineState(status), expected, status);
     }
+    assert.equal(statusPresentationForRunStatus(RunStatus.QUEUED), 'waiting');
+    assert.equal(PIPELINE_RUN_STATUS_LABELS[RunStatus.QUEUED], 'Waiting for resources...');
+    assert.equal(STATUS_PRESENTATION_LABELS.waiting, 'Waiting for resources...');
+    assert.equal(statusPresentationForPipelineNodeStatus(
+        PipelineRunNodeStatus.QUEUED,
+        RunStatus.QUEUED,
+    ), undefined);
+    assert.equal(statusPresentationForPipelineNodeStatus(
+        PipelineRunNodeStatus.QUEUED,
+        RunStatus.RUNNING,
+    ), undefined);
+    assert.equal(statusPresentationForPipelineNodeStatus(undefined, RunStatus.QUEUED), undefined);
     for (const status of [undefined, null, '', '  ', 'INACTIVE', 'UNSUCCESSFUL', 'NOT_A_STATUS']) {
         assert.equal(statusPresentationForPipelineState(status), 'unknown');
     }
@@ -268,6 +280,8 @@ test('asset flow aggregation handles empty, absent, unknown, active, and termina
         { expected: undefined, name: 'success mixed with an absent state', statuses: ['succeeded', undefined] },
         { expected: 'succeeded', name: 'all flows succeeded', statuses: ['succeeded', 'succeeded'] },
         { expected: 'canceled', name: 'canceled flow takes precedence over success', statuses: ['succeeded', 'canceled'] },
+        { expected: 'waiting', name: 'waiting flow takes precedence over success', statuses: ['succeeded', 'waiting'] },
+        { expected: 'waiting', name: 'waiting flow takes precedence over active flow', statuses: ['unknown', 'running', 'waiting'] },
         { expected: 'running', name: 'active flow takes precedence over success', statuses: ['succeeded', 'running'] },
         { expected: 'running', name: 'active flow takes precedence over unknown', statuses: ['unknown', 'running'] },
         { expected: 'failed', name: 'failure takes precedence over active flow', statuses: ['running', 'failed'] },

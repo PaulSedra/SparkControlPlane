@@ -426,7 +426,11 @@
 }
 
 .jobs-pipelines-run-status .status-icon--running {
-  color: var(--warning);
+  color: var(--status-icon-running-color);
+}
+
+.jobs-pipelines-status-label.waiting {
+  color: var(--status-icon-waiting-color);
 }
 
 .jobs-pipelines-run-status .status-icon--failed {

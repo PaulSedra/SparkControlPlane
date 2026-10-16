@@ -13,6 +13,7 @@ export const StatusPresentationState = {
     RUNNING: 'running',
     SUCCEEDED: 'succeeded',
     UNKNOWN: 'unknown',
+    WAITING: 'waiting',
 } as const;
 
 /** Semantic presentation state derived from a domain status. */
@@ -35,6 +36,7 @@ export const STATUS_PRESENTATION_STATES: readonly StatusPresentationState[] = [
     StatusPresentationState.RUNNING,
     StatusPresentationState.SUCCEEDED,
     StatusPresentationState.UNKNOWN,
+    StatusPresentationState.WAITING,
 ];
 
 /** Badge labels for the shared presentation states. */
@@ -44,11 +46,12 @@ export const STATUS_PRESENTATION_LABELS: Readonly<Record<StatusPresentationState
     [StatusPresentationState.RUNNING]: 'Running',
     [StatusPresentationState.SUCCEEDED]: 'Completed',
     [StatusPresentationState.UNKNOWN]: 'Unknown',
+    [StatusPresentationState.WAITING]: 'Waiting for resources...',
 };
 
 /** Run status labels used by history, details, and action summaries. */
 export const PIPELINE_RUN_STATUS_LABELS: Readonly<Record<RunStatus, string>> = {
-    [RunStatus.QUEUED]: 'Queued',
+    [RunStatus.QUEUED]: 'Waiting for resources...',
     [RunStatus.SUBMITTING]: 'Submitting',
     [RunStatus.RUNNING]: 'Running',
     [RunStatus.SUCCEEDED]: 'Completed',
@@ -65,13 +68,14 @@ export const PIPELINE_ASSET_STATUS_LABELS: Readonly<Record<PipelineAssetState, s
     [StatusPresentationState.RUNNING]: 'Running',
     [StatusPresentationState.SUCCEEDED]: 'Succeeded',
     [StatusPresentationState.UNKNOWN]: 'Unknown',
+    [StatusPresentationState.WAITING]: 'Waiting for resources...',
     [PipelineAssetState.DEFINED]: 'Defined',
 };
 
 type PipelineStateToken = RunStatus | PipelineRunNodeStatus | CliExecutionState;
 
 const PIPELINE_STATE_PRESENTATION_STATE: Readonly<Record<PipelineStateToken, StatusPresentationState>> = {
-    [RunStatus.QUEUED]: StatusPresentationState.RUNNING,
+    [RunStatus.QUEUED]: StatusPresentationState.WAITING,
     [RunStatus.SUBMITTING]: StatusPresentationState.RUNNING,
     [PipelineRunNodeStatus.PLANNING]: StatusPresentationState.RUNNING,
     [PipelineRunNodeStatus.STARTING]: StatusPresentationState.RUNNING,
@@ -106,7 +110,13 @@ export function statusPresentationForPipelineNodeStatus(
     status?: string | null,
     runStatus?: RunStatus | null,
     completedAt?: string | null,
-): StatusPresentationState {
+): StatusPresentationState | undefined {
+    if (
+        status === PipelineRunNodeStatus.QUEUED ||
+        (status == null && runStatus === RunStatus.QUEUED)
+    ) {
+        return undefined;
+    }
     if (
         runStatus === RunStatus.CANCELED &&
         status === PipelineRunNodeStatus.FAILED &&
@@ -160,6 +170,9 @@ export function pipelineAssetStateForIncomingFlows(
     }
     if (statuses.includes(StatusPresentationState.CANCELED)) {
         return StatusPresentationState.CANCELED;
+    }
+    if (statuses.includes(StatusPresentationState.WAITING)) {
+        return StatusPresentationState.WAITING;
     }
     if (statuses.includes(StatusPresentationState.RUNNING)) {
         return StatusPresentationState.RUNNING;

@@ -241,7 +241,11 @@
 }
 
 .run-status.running {
-  color: var(--warning);
+  color: var(--status-icon-running-color);
+}
+
+.run-status.waiting {
+  color: var(--status-icon-waiting-color);
 }
 
 .run-status.unknown {

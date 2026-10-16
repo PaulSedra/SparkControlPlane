@@ -5,7 +5,7 @@
 
 import { Search } from 'lucide-react';
 import type { PipelineNode, PipelineRun } from '../../../../shared/pipelineRegistryTypes.ts';
-import { STATUS_PRESENTATION_LABELS, statusPresentationForPipelineNodeStatus } from '../../../../shared/status/presentation.ts';
+import { statusPresentationForPipelineNodeStatus } from '../../../../shared/status/presentation.ts';
 import { StatusIcon } from '../../ui/StatusIcon';
 import { formatPipelineDuration } from '../pipelineTiming.ts';
 import { pipelineNodeDurationMs } from '../../../utils/pipelineRunTiming.ts';
@@ -62,7 +62,7 @@ export function PipelinePerformanceView({
                     const duration = pipelineNodeDurationMs(statusRecord, nowMs);
                     return (
                         <tr key={node.id}>
-                            <td><StatusIcon label={STATUS_PRESENTATION_LABELS[status]} status={status} /></td>
+                            <td><StatusIcon status={status} /></td>
                             <AssetNameCell
                                 node={node}
                                 onSelectSampleDataNode={onSelectSampleDataNode}

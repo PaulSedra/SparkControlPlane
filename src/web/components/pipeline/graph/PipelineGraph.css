@@ -109,7 +109,11 @@
 }
 
 .dag-node.running {
-  border-top-color: var(--warning);
+  border-top-color: var(--status-icon-running-color);
+}
+
+.dag-node.waiting {
+  border-top-color: var(--status-icon-waiting-color);
 }
 
 .dag-node.failed {
@@ -117,6 +121,7 @@
 }
 
 .dag-node.succeeded,
+.dag-node.waiting,
 .dag-node.running,
 .dag-node.failed {
   background: var(--panel);
@@ -216,7 +221,11 @@
 }
 
 .asset-node-status-bar.running {
-  background: var(--warning);
+  background: var(--status-icon-running-color);
+}
+
+.asset-node-status-bar.waiting {
+  background: var(--status-icon-waiting-color);
 }
 
 .asset-node-status-bar.failed {

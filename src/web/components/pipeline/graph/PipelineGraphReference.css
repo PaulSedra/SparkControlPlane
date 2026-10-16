@@ -72,7 +72,11 @@
 }
 
 .pipeline-app-shell .dag-node.running {
-  border-top-color: #e0a43d;
+  border-top-color: var(--status-icon-running-color);
+}
+
+.pipeline-app-shell .dag-node.waiting {
+  border-top-color: var(--status-icon-waiting-color);
 }
 
 .pipeline-app-shell .dag-node.failed {
@@ -84,7 +88,11 @@
 }
 
 .pipeline-app-shell .asset-node-status-bar.running {
-  background: #e0a43d;
+  background: var(--status-icon-running-color);
+}
+
+.pipeline-app-shell .asset-node-status-bar.waiting {
+  background: var(--status-icon-waiting-color);
 }
 
 .pipeline-app-shell .asset-node:hover,
@@ -230,7 +238,11 @@
 }
 
 .graph-minimap-node.running {
-  background: #d29a33;
+  background: var(--status-icon-running-color);
+}
+
+.graph-minimap-node.waiting {
+  background: var(--status-icon-waiting-color);
 }
 
 .graph-minimap-node.failed {

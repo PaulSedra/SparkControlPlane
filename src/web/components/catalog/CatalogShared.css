@@ -101,7 +101,7 @@
 }
 
 .catalog-status-row .status-icon--running {
-  color: #e0a43d;
+  color: var(--status-icon-running-color);
 }
 
 @media (max-width: 1150px) {

@@ -220,7 +220,7 @@
 }
 
 .pipeline-app-shell .pipeline-panel-table .status-icon--running {
-  color: #e0a43d;
+  color: var(--status-icon-running-color);
 }
 
 .pipeline-app-shell .pipeline-panel-table .status-icon--unknown,

@@ -23,6 +23,15 @@ import {
 
 const unknownRun = { status: 'UNKNOWN' } as PipelineRun;
 
+test('presents queued runs as waiting for resources in run history', () => {
+    assert.equal(statusPresentationForRunStatus(RunStatus.QUEUED), 'waiting');
+    assert.equal(PIPELINE_RUN_STATUS_LABELS[RunStatus.QUEUED], 'Waiting for resources...');
+    assert.equal(
+        pipelineRunHistoryStatusLabel({ status: RunStatus.QUEUED }),
+        'Waiting for resources...',
+    );
+});
+
 test('presents UNKNOWN as terminal with an explicit no-resubmit explanation', () => {
     assert.equal(statusPresentationForPipelineState('UNKNOWN'), 'unknown');
     assert.equal(statusPresentationForRunStatus('UNKNOWN'), 'unknown');

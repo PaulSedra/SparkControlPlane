@@ -99,6 +99,58 @@ test('external and unresolved flows remain visible while mixed internal reads co
         .some((operation) => operation.output.id === flowNode.id), true);
 });
 
+test('keeps queued run and node states at the job level in the graph', () => {
+    const external: PipelineNode = {
+        id: 'external-id',
+        name: 'VALUES',
+        nodeType: 'EXTERNAL_DATASET',
+        qualifiedName: 'sample.values',
+    };
+    const first: PipelineNode = {
+        id: 'first-id',
+        name: 'orders',
+        nodeType: 'MATERIALIZED_VIEW',
+        qualifiedName: 'sample.orders',
+    };
+    const second: PipelineNode = {
+        ...first,
+        id: 'second-id',
+        name: 'customer-totals',
+        qualifiedName: 'sample.customer_totals',
+    };
+    const pipeline = pipelineDetail([external, first, second], {
+        edges: [
+            {
+                confidence: 'LOW',
+                evidence: 'test fixture',
+                id: 'external-to-first',
+                sourceExpression: external.qualifiedName,
+                sourceNodeId: external.id,
+                targetNodeId: first.id,
+            },
+            {
+                confidence: 'LOW',
+                evidence: 'test fixture',
+                id: 'first-to-second',
+                sourceExpression: first.qualifiedName,
+                sourceNodeId: first.id,
+                targetNodeId: second.id,
+            },
+        ],
+    });
+    const graph = renderedGraphOperations(
+        pipeline,
+        runWithNodeStatuses({
+            [first.qualifiedName]: nodeStatus(first.qualifiedName, PipelineRunNodeStatus.QUEUED),
+            [second.qualifiedName]: nodeStatus(second.qualifiedName, PipelineRunNodeStatus.QUEUED),
+        }, RunStatus.QUEUED),
+    );
+
+    assert.equal(graph.find((operation) => operation.output.id === first.id)?.status, 'defined');
+    assert.equal(graph.find((operation) => operation.output.id === second.id)?.status, 'defined');
+    assert.equal(graph.find((operation) => operation.output.id === first.id)?.inputs[0]?.status, undefined);
+});
+
 test('confirmed Spark table absence is forwarded to output graph nodes', () => {
     const pipeline = pipelineDetail([tableNode]);
     const graph = renderedGraphOperations(

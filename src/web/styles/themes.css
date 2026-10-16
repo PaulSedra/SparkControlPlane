@@ -167,7 +167,7 @@
 }
 
 :root[data-theme='light'] .pipeline-app-shell .dag-node.running {
-  border-top-color: #c2872a;
+  border-top-color: var(--status-icon-running-color);
 }
 
 :root[data-theme='light'] .pipeline-app-shell .dag-node.failed {
