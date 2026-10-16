@@ -1,15 +1,18 @@
 ---
 name: development-workflow
-description: Mandatory checklist for every Spark Control Plane change, including local checks, integration suites, and existing-container refresh.
+description: Full checklist for non-Markdown, non-CSS changes under src/ or tests/; CSS changes require a local demo restart.
 ---
 
 # Development workflow
 
-Use this skill for every change set. Run the complete checklist below after
-each change, including documentation, configuration, skills, and AGENTS files.
-Do not skip a step because the change is small or belongs to a particular
-language or module. If several files make up one atomic change, finish that
-change and run the checklist before starting another independent change.
+Use this skill to determine documentation ownership and checklist applicability.
+Run the full checklist only when a change set includes at least one changed
+file under `src/` or `tests/` whose extension is neither `.md` nor `.css`
+(case-insensitive). Markdown and CSS files do not trigger the full checklist.
+CSS changes under these directories still require step 6, the local demo
+restart. For a CSS-only change set, run only that step. For an atomic multi-file
+change, evaluate the complete change set and run the full checklist once after
+all changes if any file qualifies; otherwise run step 6 if a CSS file changed.
 
 Module descriptions, architecture, behavior contracts, and ownership maps
 belong in localized README.md files. Actionable instructions for agents belong
@@ -28,7 +31,7 @@ instructions for future agents change. Keep transient task notes and general
 coding, design, and testing guidance in their respective skills; avoid
 AGENTS.md churn when no agent instruction changes.
 
-## Checklist for every change
+## Checklist for qualifying changes
 
 Run these steps in order, one test process at a time:
 
@@ -60,35 +63,46 @@ Run these steps in order, one test process at a time:
 
        node --test --experimental-test-coverage --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/lcov.info --experimental-strip-types tests/**/*.test.ts
 
-6. Refresh the existing application container in place (if the ps1 file exists):
+6. Restart the local demo stack:
 
-       pwsh -NoProfile -File .codex/skills/development-workflow/scripts/refresh-container.ps1 -Apply
+   Check whether the Control Plane demo container is running:
 
-   Do not create or replace a container. The script must resolve the existing
-   Spark Control Plane service, preserve its read-only /app/pipelines mount,
-   copy the current build and runtime source, and restart that same container.
-   If it cannot identify one existing app container, stop and report the
-   blocker; do not run compose up or create a replacement.
+       docker compose --file compose.dev.yaml ps --status running -q control-plane
 
-7. Verify the live refresh: record the exact container name and restart result;
-   check /health, /ready, and /api/v1/pipelines including response bodies; and
-   verify the served JavaScript asset hash matches the local build. A local
-   build or HTTP 200 alone is not completion evidence.
+   If the command returns a container ID, stop the demo stack:
 
-Run every checklist step even if an earlier step fails, unless a safety gate
-explicitly requires stopping. Repair failures and rerun the complete checklist.
-If an external condition prevents a step, report it as blocked and do not claim
-the change is fully verified.
+       npm run demo:down
+
+   Build and start the demo stack:
+
+       npm run demo:up
+
+7. Verify the live demo: record the Control Plane container name and startup
+   result; check /health, /ready, and /api/v1/pipelines including response
+   bodies; and verify the served JavaScript asset hash matches the local build.
+   A local build or HTTP 200 alone is not completion evidence.
+
+For a qualifying change set, run every checklist step even if an earlier step
+fails, unless a safety gate explicitly requires stopping. Repair failures and
+rerun the complete checklist. If an external condition prevents a step, report
+it as blocked and do not claim the change is fully verified.
 
 ## Container permissions
 
-Container creation is permitted only inside the repository's managed
-integration-test runners. The application refresh is an in-place copy and
-restart of its existing container. Never create containers for lint, builds, or unrelated tools. Never use docker run,
-docker create, docker compose up, or docker-compose up for this workflow.
+These permissions apply whenever the full checklist or CSS-only demo restart
+runs.
+
+Integration-test containers may be created only by the repository's managed
+integration-test runners. Start the local demo with `npm run demo:up`; if its
+Control Plane container is already running, stop the stack with
+`npm run demo:down` first. Do not run `docker run`, `docker create`, or raw
+`docker compose up` commands for this workflow. Never create containers for
+lint, builds, or unrelated tools.
 
 ## Report
 
-For each change, report lint/build/test results, the refreshed container and
-live endpoint/asset evidence.
+For a qualifying change set, report lint/build/test results, the demo container,
+and live endpoint/asset evidence. For a CSS-only change set, report the demo
+restart result. Include a clickable demo link whenever the demo restart runs:
+`[Open demo](http://127.0.0.1:8080)`.
 Report failures and skipped or blocked evidence explicitly.
