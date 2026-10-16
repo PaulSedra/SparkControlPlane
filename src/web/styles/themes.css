@@ -162,18 +162,6 @@
   color: #1f2937;
 }
 
-:root[data-theme='light'] .pipeline-app-shell .dag-node.succeeded {
-  border-top-color: #4caf73;
-}
-
-:root[data-theme='light'] .pipeline-app-shell .dag-node.running {
-  border-top-color: var(--status-icon-running-color);
-}
-
-:root[data-theme='light'] .pipeline-app-shell .dag-node.failed {
-  border-top-color: #d95d66;
-}
-
 :root[data-theme='light'] .pipeline-app-shell .asset-node.selected {
   border-color: var(--accent);
   background: var(--accent-soft);

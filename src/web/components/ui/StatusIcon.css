@@ -1,16 +1,16 @@
 .status-icon--succeeded {
-  color: var(--status-icon-succeeded-color);
+  color: var(--status-succeeded-color);
 }
 
 .status-icon--running {
-  color: var(--status-icon-running-color);
+  color: var(--status-running-color);
   animation: status-icon-spin 1.2s linear infinite;
   transform-box: fill-box;
   transform-origin: center;
 }
 
 .status-icon--waiting {
-  color: var(--status-icon-waiting-color);
+  color: var(--status-waiting-color);
   animation: status-icon-spin 1.2s linear infinite;
   transform-box: fill-box;
   transform-origin: center;
@@ -21,15 +21,15 @@
 }
 
 .status-icon--failed {
-  color: var(--status-icon-failed-color);
+  color: var(--status-failed-color);
 }
 
 .status-icon--canceled {
-  color: var(--status-icon-canceled-color);
+  color: var(--status-canceled-color);
 }
 
 .status-icon--unknown {
-  color: var(--status-icon-unknown-color);
+  color: var(--status-unknown-color);
 }
 
 @keyframes status-icon-spin {

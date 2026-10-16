@@ -67,32 +67,8 @@
   padding: 4px;
 }
 
-.pipeline-app-shell .dag-node.succeeded {
-  border-top-color: var(--success);
-}
-
-.pipeline-app-shell .dag-node.running {
-  border-top-color: var(--status-icon-running-color);
-}
-
-.pipeline-app-shell .dag-node.waiting {
-  border-top-color: var(--status-icon-waiting-color);
-}
-
-.pipeline-app-shell .dag-node.failed {
-  border-top-color: var(--danger);
-}
-
 .pipeline-app-shell .dag-node.asset-node {
   border-top: 1px solid var(--application-shell-border);
-}
-
-.pipeline-app-shell .asset-node-status-bar.running {
-  background: var(--status-icon-running-color);
-}
-
-.pipeline-app-shell .asset-node-status-bar.waiting {
-  background: var(--status-icon-waiting-color);
 }
 
 .pipeline-app-shell .asset-node:hover,
@@ -235,18 +211,6 @@
   height: 5px;
   border-radius: 1px;
   background: #3b9a30;
-}
-
-.graph-minimap-node.running {
-  background: var(--status-icon-running-color);
-}
-
-.graph-minimap-node.waiting {
-  background: var(--status-icon-waiting-color);
-}
-
-.graph-minimap-node.failed {
-  background: #d85b65;
 }
 
 .graph-minimap-node.defined {

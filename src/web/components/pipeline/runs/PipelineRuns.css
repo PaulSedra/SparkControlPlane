@@ -86,26 +86,6 @@
   gap: 4px;
 }
 
-.pipeline-run-status.succeeded {
-  color: var(--success);
-}
-
-.pipeline-run-status.failed {
-  color: var(--danger);
-}
-
-.pipeline-run-status.running {
-  color: var(--status-icon-running-color);
-}
-
-.pipeline-run-status.waiting {
-  color: var(--status-icon-waiting-color);
-}
-
-.pipeline-run-status.unknown {
-  color: var(--muted);
-}
-
 .pipeline-runs-view {
   grid-area: canvas;
   display: grid;

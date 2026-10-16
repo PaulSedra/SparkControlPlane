@@ -35,24 +35,24 @@ require a label.
 
 ## Colors
 
-| Token                           | Value                            | Meaning                         |
-|---------------------------------|----------------------------------|---------------------------------|
-| `--bg`                          | `#f7f9fb`                        | Application background          |
-| `--panel`                       | `#ffffff`                        | Primary surface                 |
-| `--panel-soft`                  | `#f3f6fa`                        | Secondary surface/unknown state |
-| `--text`                        | `#3c3a3e` (light), `#fff` (dark) | Primary text                    |
-| `--muted`                       | `#607086`                        | Supporting text                 |
-| `--line`                        | `#d8e0ea`                        | Borders/dividers                |
-| `--accent`                      | `#e25a1c`                        | Primary action/navigation       |
-| `--accent-soft`                 | `#e8f1ff`                        | Selected/hover accent           |
-| `--success`                     | `#1f8f4d`                        | Completed/connected/deployed    |
-| `--warning`                     | `#a96500`                        | Running/submitting              |
-| `--danger`                      | `#c0352b`                        | Failed/error/invalid            |
-| `--status-icon-succeeded-color` | `var(--success)`                 | Successful status icon          |
-| `--status-icon-running-color`   | `var(--warning)`                 | Running status icon             |
-| `--status-icon-failed-color`    | `var(--danger)`                  | Failed status icon              |
-| `--status-icon-canceled-color`  | `var(--muted)`                   | Canceled status icon            |
-| `--status-icon-unknown-color`   | `var(--muted)`                   | Unknown status icon             |
+| Token                      | Value                            | Meaning                              |
+|----------------------------|----------------------------------|--------------------------------------|
+| `--bg`                     | `#f7f9fb`                        | Application background               |
+| `--panel`                  | `#ffffff`                        | Primary surface                      |
+| `--panel-soft`             | `#f3f6fa`                        | Secondary surface/unknown state      |
+| `--text`                   | `#3c3a3e` (light), `#fff` (dark) | Primary text                         |
+| `--muted`                  | `#607086`                        | Supporting text                      |
+| `--line`                   | `#d8e0ea`                        | Borders/dividers                     |
+| `--accent`                 | `#e25a1c`                        | Primary action/navigation            |
+| `--accent-soft`            | `#e8f1ff`                        | Selected/hover accent                |
+| `--success`                | `#1f8f4d`                        | Running/completed/connected/deployed |
+| `--danger`                 | `#c0352b`                        | Failed/error/invalid                 |
+| `--status-succeeded-color` | `var(--success)`                 | Succeeded status                     |
+| `--status-running-color`   | `var(--success)`                 | Running status                       |
+| `--status-waiting-color`   | `var(--accent)`                  | Waiting status                       |
+| `--status-failed-color`    | `var(--danger)`                  | Failed status                        |
+| `--status-canceled-color`  | `var(--muted)`                   | Canceled status                      |
+| `--status-unknown-color`   | `var(--muted)`                   | Unknown status                       |
 
 Each semantic state has a matching `-soft` background token. Prefer variables; consolidate repeated literal colors
 before adding new ones.
@@ -68,11 +68,13 @@ before adding new ones.
 ## State semantics
 
 - Succeeded/completed/connected: green.
-- Running/submitting: amber.
+- Waiting for resources on queued runs: orange; submitting and running: green.
 - Failed/error/invalid: red.
 - Unknown/draft/no data/canceled run: muted neutral.
 
-StatusIcon owns status icon colors. Its shared stylesheet maps the namespaced
-state classes (`status-icon--*`) to the corresponding `--status-icon-*-color`
-tokens; status consumers provide the state and accessible label without setting
-the icon foreground.
+The `--status-*-color` tokens in `tokens.css` define semantic lifecycle colors.
+`status.css` applies them to run labels and pipeline graph indicators;
+`StatusIcon.css` applies them to lifecycle icons and owns their animation.
+Status consumers provide the state and accessible label without setting the
+icon foreground. Waiting uses an animated orange quarter-circle loader;
+running uses a spinning green refresh icon.

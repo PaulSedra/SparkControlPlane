@@ -421,27 +421,6 @@
   border-bottom: 2px solid var(--application-shell-border);
 }
 
-.jobs-pipelines-run-status .status-icon--succeeded {
-  color: var(--success);
-}
-
-.jobs-pipelines-run-status .status-icon--running {
-  color: var(--status-icon-running-color);
-}
-
-.jobs-pipelines-status-label.waiting {
-  color: var(--status-icon-waiting-color);
-}
-
-.jobs-pipelines-run-status .status-icon--failed {
-  color: var(--danger);
-}
-
-.jobs-pipelines-run-status .status-icon--unknown,
-.jobs-pipelines-status-label.unknown {
-  color: var(--muted);
-}
-
 .jobs-pipelines-row-actions {
   display: inline-flex;
   align-items: center;

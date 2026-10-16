@@ -232,26 +232,6 @@
   white-space: nowrap;
 }
 
-.run-status.succeeded {
-  color: var(--success);
-}
-
-.run-status.failed {
-  color: var(--danger);
-}
-
-.run-status.running {
-  color: var(--status-icon-running-color);
-}
-
-.run-status.waiting {
-  color: var(--status-icon-waiting-color);
-}
-
-.run-status.unknown {
-  color: var(--muted);
-}
-
 .run-picker-menu {
   position: absolute;
   top: calc(100% + 4px);

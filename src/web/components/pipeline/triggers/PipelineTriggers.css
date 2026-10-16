@@ -84,14 +84,6 @@
   white-space: nowrap;
 }
 
-.pipeline-trigger-last-outcome.failed {
-  color: var(--danger);
-}
-
-.pipeline-trigger-last-outcome.running {
-  color: var(--status-icon-running-color);
-}
-
 .pipeline-trigger-actions {
   display: flex;
   align-items: center;

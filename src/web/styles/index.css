@@ -36,3 +36,4 @@
 @import "../components/catalog/CatalogTheme.css";
 @import "../components/ui/StatusIcon.css";
 @import "../components/ui/DataAssetIcon.css";
+@import "./status.css";

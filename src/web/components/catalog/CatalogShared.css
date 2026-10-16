@@ -92,18 +92,6 @@
   white-space: pre-wrap;
 }
 
-.catalog-status-row .status-icon--succeeded {
-  color: var(--success);
-}
-
-.catalog-status-row .status-icon--failed {
-  color: var(--danger);
-}
-
-.catalog-status-row .status-icon--running {
-  color: var(--status-icon-running-color);
-}
-
 @media (max-width: 1150px) {
 
   .catalog-header-actions .catalog-secondary-button {

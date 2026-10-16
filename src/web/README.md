@@ -69,7 +69,7 @@ behavior is described in [components/README.md](components/README.md).
 | `components/workspace/`                         | Read-only source workspace                                      |
 | `components/graph-canvas/` and `components/ui/` | Shared visual and interaction primitives                        |
 | `utils/`                                        | Cross-feature pipeline asset, timing, and presentation helpers  |
-| `styles/`                                       | Shared tokens and browser styles                                |
+| `styles/`                                       | Shared tokens, lifecycle status styling, and browser styles     |
 
 Shared API and persistence behavior is described in
 [`../server/README.md`](../server/README.md). Visual tokens, responsive

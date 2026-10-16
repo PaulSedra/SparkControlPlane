@@ -22,12 +22,12 @@
   --success-soft: #12351f;
   --danger: #ef6470;
   --danger-soft: #3e1e25;
-  --status-icon-succeeded-color: var(--success);
-  --status-icon-running-color: var(--success);
-  --status-icon-waiting-color: var(--accent);
-  --status-icon-failed-color: var(--danger);
-  --status-icon-canceled-color: var(--muted);
-  --status-icon-unknown-color: var(--muted);
+  --status-succeeded-color: var(--success);
+  --status-running-color: var(--success);
+  --status-waiting-color: var(--accent);
+  --status-failed-color: var(--danger);
+  --status-canceled-color: var(--muted);
+  --status-unknown-color: var(--muted);
   --shadow: 0 12px 34px rgba(0, 0, 0, 0.28);
 }
 
@@ -48,11 +48,11 @@
   --success-soft: #e8f7ee;
   --danger: #c0352b;
   --danger-soft: #fde8e6;
-  --status-icon-succeeded-color: var(--success);
-  --status-icon-running-color: var(--success);
-  --status-icon-waiting-color: var(--accent);
-  --status-icon-failed-color: var(--danger);
-  --status-icon-canceled-color: var(--muted);
-  --status-icon-unknown-color: var(--muted);
+  --status-succeeded-color: var(--success);
+  --status-running-color: var(--success);
+  --status-waiting-color: var(--accent);
+  --status-failed-color: var(--danger);
+  --status-canceled-color: var(--muted);
+  --status-unknown-color: var(--muted);
   --shadow: 0 12px 34px rgba(31, 41, 55, 0.08);
 }

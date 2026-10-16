@@ -211,23 +211,6 @@
   background: var(--bg);
 }
 
-.pipeline-app-shell .pipeline-panel-table .status-icon--succeeded {
-  color: var(--success);
-}
-
-.pipeline-app-shell .pipeline-panel-table .status-icon--failed {
-  color: var(--danger);
-}
-
-.pipeline-app-shell .pipeline-panel-table .status-icon--running {
-  color: var(--status-icon-running-color);
-}
-
-.pipeline-app-shell .pipeline-panel-table .status-icon--unknown,
-.pipeline-app-shell .pipeline-panel-table .status-icon--canceled {
-  color: var(--muted);
-}
-
 .pipeline-output-name {
   display: inline-flex;
   align-items: center;

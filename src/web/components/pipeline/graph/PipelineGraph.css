@@ -100,24 +100,8 @@
   text-align: left;
 }
 
-.dag-node.succeeded {
-  border-top-color: var(--success);
-}
-
 .dag-node.defined {
   border-top-color: #8da2ba;
-}
-
-.dag-node.running {
-  border-top-color: var(--status-icon-running-color);
-}
-
-.dag-node.waiting {
-  border-top-color: var(--status-icon-waiting-color);
-}
-
-.dag-node.failed {
-  border-top-color: var(--danger);
 }
 
 .dag-node.succeeded,
@@ -212,28 +196,8 @@
   pointer-events: none;
 }
 
-.asset-node-status-bar.succeeded {
-  background: var(--success);
-}
-
 .asset-node-status-bar.defined {
   background: #8da2ba;
-}
-
-.asset-node-status-bar.running {
-  background: var(--status-icon-running-color);
-}
-
-.asset-node-status-bar.waiting {
-  background: var(--status-icon-waiting-color);
-}
-
-.asset-node-status-bar.failed {
-  background: var(--danger);
-}
-
-.asset-node-status-bar.canceled {
-  background: var(--muted);
 }
 
 .asset-node.selectable {

@@ -10,7 +10,7 @@ the operator interface. Page and route ownership is described in
 |--------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|
 | `AppIcon`                      | Renders shared Lucide icons for brand, action, toolbar, input, node-type, and empty-state use with semantic sizing and accessible labels |
 | `DataAssetIcon`                | Uses native Lucide `Table2` for tables and overlays `Eye` at lower right for views throughout Catalog and pipeline UI                    |
-| `StatusIcon`                   | Maps waiting, canceled, failed, running, succeeded, and unknown states to shared icons and semantic colors                               |
+| `StatusIcon`                   | Maps waiting, canceled, failed, running, succeeded, and unknown states to shared icons and accessible labels                             |
 | `StatusPill` and `StatusBadge` | Combine status text with `StatusIcon`                                                                                                    |
 | `EmptyState`                   | Presents valid zero-data and waiting states; actionable errors use notices                                                               |
 | `GraphCanvas`                  | Owns graph pan, zoom, transformed viewport, pointer drag, wheel behavior, accessible canvas label, and optional footer                   |
