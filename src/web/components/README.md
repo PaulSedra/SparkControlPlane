@@ -122,5 +122,6 @@ does not provide the fields needed for working job, ownership-scope, or run-as
 filters. Trigger-created run outcomes appear in run history. Dataset access
 remains server-mediated and bounded.
 
-Visual values, responsive breakpoints, and shared accessibility conventions are
-described in the web-development skill's design-system reference.
+Visual guidance is split across the typography, layout and spacing, state
+semantics, color, and icon references in the
+[web-development skill](../../../.codex/skills/web-development/SKILL.md).

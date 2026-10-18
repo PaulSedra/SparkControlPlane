@@ -1,7 +1,7 @@
 .pipeline-triggers-loading {
   height: 54px;
-  border: 1px solid var(--application-shell-border);
-  background: linear-gradient(90deg, var(--bg), var(--nav), var(--bg));
+  border: 1px solid var(--background);
+  background: linear-gradient(90deg, var(--background), var(--background), var(--background));
   background-size: 220% 100%;
   animation: pipeline-triggers-loading-pulse 1.4s ease-in-out infinite;
 }
@@ -12,13 +12,13 @@
 }
 
 .pipeline-triggers-message {
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.68rem;
   line-height: 1.4;
 }
 
 .pipeline-triggers-message.error {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 
 .pipeline-trigger-list {
@@ -30,7 +30,7 @@
   display: grid;
   gap: 6px;
   padding-top: 10px;
-  border-top: 1px solid var(--application-shell-border);
+  border-top: 1px solid var(--background);
 }
 
 .pipeline-trigger-card:first-child {
@@ -48,11 +48,11 @@
 .pipeline-trigger-heading > .app-icon {
   flex: 0 0 auto;
   margin-top: 1px;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .pipeline-trigger-title {
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.7rem;
   font-weight: 750;
   min-width: 0;
@@ -69,12 +69,12 @@
 .pipeline-trigger-details {
   display: grid;
   gap: 3px;
-  color: var(--text);
+  color: var(--text-primary);
   overflow-wrap: anywhere;
 }
 
 .pipeline-trigger-next-run {
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .pipeline-trigger-last-outcome {
@@ -94,10 +94,10 @@
 .pipeline-trigger-action {
   min-height: 26px;
   padding: 3px 8px;
-  border: 1px solid var(--application-shell-border);
+  border: 1px solid var(--background);
   border-radius: 3px;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--surface);
+  color: var(--text-primary);
   font-size: 0.65rem;
   font-weight: 650;
   white-space: nowrap;
@@ -105,7 +105,7 @@
 
 .pipeline-trigger-action:hover,
 .pipeline-trigger-action:focus-visible {
-  border-color: #5c7483;
+  border-color: var(--background);
 }
 
 .pipeline-trigger-action:disabled {

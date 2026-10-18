@@ -6,11 +6,11 @@
   width: 100%;
   max-height: min(360px, calc(100% - 40px));
   overflow: hidden;
-  border: 1px solid #8d424d;
+  border: 1px solid var(--danger-border);
   border-radius: 3px;
-  background: rgba(39, 22, 27, 0.96);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
-  color: #f0c9ce;
+  background: var(--danger);
+  box-shadow: var(--shadow);
+  color: var(--text-primary);
 }
 
 .pipeline-run-error-header {
@@ -30,14 +30,14 @@
 }
 
 .pipeline-run-error-summary strong {
-  color: #f2d8dc;
+  color: var(--danger-text);
   font-size: 0.68rem;
   font-weight: 750;
 }
 
 .pipeline-run-error-summary span {
   overflow: hidden;
-  color: #d7aeb4;
+  color: var(--danger-soft-text);
   font-size: 0.65rem;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -50,19 +50,19 @@
   gap: 4px;
   min-height: 25px;
   padding: 3px 6px;
-  border: 1px solid #9a515b;
+  border: 1px solid var(--danger-border);
   border-radius: 2px;
-  background: rgba(95, 39, 48, 0.52);
-  color: #f0c9ce;
+  background: var(--danger-soft);
+  color: var(--danger-text);
   font-size: 0.64rem;
   font-weight: 650;
 }
 
 .pipeline-run-error-toggle:hover,
 .pipeline-run-error-toggle:focus-visible {
-  border-color: #db7a86;
-  background: rgba(119, 48, 59, 0.7);
-  color: #fff1f2;
+  border-color: var(--danger-border);
+  background: var(--danger-soft-hover);
+  color: var(--danger-text);
 }
 
 .pipeline-run-error-toggle .app-icon {
@@ -77,13 +77,13 @@
   min-height: 0;
   overflow: auto;
   padding: 7px 9px 8px;
-  border-top: 1px solid #713741;
-  background: rgba(21, 14, 17, 0.76);
+  border-top: 1px solid var(--danger-border);
+  background: var(--danger-surface);
 }
 
 .pipeline-run-error-details pre {
   margin: 0;
-  color: #f1dfe2;
+  color: var(--danger-soft-text);
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 0.63rem;
   line-height: 1.45;
@@ -104,8 +104,8 @@
   gap: 7px;
   margin: 8px 12px 0;
   padding: 7px 9px;
-  border: 1px solid #713c44;
-  background: #2b1a20;
-  color: #f49aa0;
+  border: 1px solid var(--danger-border);
+  background: var(--danger-soft);
+  color: var(--danger-text);
   font-size: 0.74rem;
 }

@@ -28,26 +28,6 @@
   color: var(--status-running-color);
 }
 
-.dag-node.succeeded,
-.pipeline-app-shell .dag-node.succeeded {
-  border-top-color: var(--status-succeeded-color);
-}
-
-.dag-node.running,
-.pipeline-app-shell .dag-node.running {
-  border-top-color: var(--status-running-color);
-}
-
-.dag-node.waiting,
-.pipeline-app-shell .dag-node.waiting {
-  border-top-color: var(--status-waiting-color);
-}
-
-.dag-node.failed,
-.pipeline-app-shell .dag-node.failed {
-  border-top-color: var(--status-failed-color);
-}
-
 .asset-node-status-bar.succeeded,
 .pipeline-app-shell .asset-node-status-bar.succeeded {
   background: var(--status-succeeded-color);

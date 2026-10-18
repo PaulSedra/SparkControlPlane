@@ -3,11 +3,11 @@
   min-height: 0;
   border: 0;
   border-radius: 0;
-  background-color: var(--pipeline-graph-background);
+  background-color: var(--background);
 }
 
 .pipeline-graph-frame .dag-shell::before {
-  background-image: radial-gradient(var(--pipeline-graph-dot) 1px, transparent 1px);
+  background-image: radial-gradient(var(--surface) 1px, transparent 1px);
   background-size: 7px 7px;
 }
 
@@ -16,9 +16,9 @@
   bottom: 10px;
   gap: 1px;
   padding: 3px;
-  border: 1px solid var(--application-shell-border);
+  border: 1px solid var(--background);
   border-radius: 3px;
-  background: var(--bg);
+  background: var(--surface);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
 }
 
@@ -27,13 +27,13 @@
   height: 27px;
   border: 1px solid transparent;
   border-radius: 2px;
-  color: #a3b6c0;
+  color: var(--text-secondary);
 }
 
 .pipeline-app-shell .dag-tools button:hover {
-  border-color: var(--application-shell-border);
-  background: var(--bg);
-  color: #e0ebef;
+  border-color: var(--background);
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 .pipeline-app-shell .dag-viewport {
@@ -52,12 +52,12 @@
   height: var(--asset-node-height);
   gap: 0;
   padding: 8px 8px 7px;
-  border: 1px solid var(--application-shell-border);
-  border-top: 2px solid #738996;
+  border: 1px solid var(--background);
+  border-top: 2px solid var(--background);
   border-radius: 4px;
-  background: var(--bg);
+  background: var(--surface);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.24);
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .pipeline-app-shell .dag-node.asset-node.external-source {
@@ -68,7 +68,7 @@
 }
 
 .pipeline-app-shell .dag-node.asset-node {
-  border-top: 1px solid var(--application-shell-border);
+  border-top: 1px solid var(--background);
 }
 
 .pipeline-app-shell .asset-node:hover,
@@ -88,12 +88,12 @@
 }
 
 .pipeline-app-shell .asset-edge {
-  stroke: #627986;
+  stroke: var(--text-secondary);
   stroke-width: 1.5;
 }
 
 .pipeline-app-shell .asset-edge-arrow {
-  fill: #627986;
+  fill: var(--text-secondary);
 }
 
 .pipeline-app-shell .asset-edge-group.is-highlighted .asset-edge {
@@ -106,7 +106,7 @@
 
 .pipeline-app-shell .node-meta,
 .pipeline-app-shell .node-footer {
-  color: #8da3ae;
+  color: var(--text-secondary);
   font-size: 0.61rem;
 }
 
@@ -159,7 +159,7 @@
   height: 24px;
   border-radius: 3px;
   background: transparent;
-  color: #a7b9c2;
+  color: var(--text-secondary);
 }
 
 .pipeline-app-shell .node-type-icon .app-icon {
@@ -180,10 +180,10 @@
   bottom: 10px;
   z-index: 3;
   padding: 4px 6px;
-  border: 1px solid var(--application-shell-border);
+  border: 1px solid var(--background);
   border-radius: 3px;
-  background: rgba(17, 28, 34, 0.9);
-  color: #9eb2bc;
+  background: var(--surface);
+  color: var(--text-secondary);
   font-size: 0.65rem;
 }
 
@@ -196,12 +196,17 @@
   display: block;
   width: 90px;
   height: 74px;
-  border: 1px solid var(--application-shell-border);
+  border: 1px solid var(--background);
   border-radius: 3px;
-  background: var(--bg);
+  background: var(--surface);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
   cursor: crosshair;
   pointer-events: auto;
   user-select: none;
+}
+
+.pipeline-app-shell .graph-minimap {
+  right: 55px;
 }
 
 .graph-minimap-node {
@@ -210,11 +215,31 @@
   width: 13px;
   height: 5px;
   border-radius: 1px;
-  background: #3b9a30;
+  background: var(--text-secondary);
 }
 
-.graph-minimap-node.defined {
-  background: #55717e;
+.graph-minimap-node.succeeded {
+  background: var(--status-succeeded-color);
+}
+
+.graph-minimap-node.running {
+  background: var(--status-running-color);
+}
+
+.graph-minimap-node.waiting {
+  background: var(--status-waiting-color);
+}
+
+.graph-minimap-node.failed {
+  background: var(--status-failed-color);
+}
+
+.graph-minimap-node.canceled {
+  background: var(--status-canceled-color);
+}
+
+.graph-minimap-node.unknown {
+  background: var(--status-unknown-color);
 }
 
 .graph-minimap-viewport {
@@ -222,7 +247,7 @@
   display: block;
   min-width: 4px;
   min-height: 4px;
-  border: 1px solid #b9d8e8;
+  border: 1px solid var(--text-secondary);
   background: rgba(91, 171, 219, 0.12);
   pointer-events: none;
 }
@@ -257,19 +282,19 @@
   border: 1px solid transparent;
   border-radius: 2px;
   background: transparent;
-  color: #8da3ae;
+  color: var(--text-secondary);
 }
 
 .pipeline-app-shell .pipeline-view-tabs button:hover,
 .pipeline-app-shell .pipeline-view-tabs button:focus-visible {
-  border-color: var(--application-shell-border);
-  background: var(--bg);
-  color: var(--text);
+  border-color: var(--background);
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 .pipeline-app-shell .pipeline-view-tabs button.active {
-  background: var(--nav);
-  color: #e1f1f8;
+  background: var(--background);
+  color: var(--text-primary);
   box-shadow: none;
 }
 
@@ -283,9 +308,9 @@
   overflow: hidden;
   grid-template-areas: "canvas";
   grid-template-rows: minmax(0, 1fr);
-  border: 1px solid var(--panel);
+  border: 1px solid var(--surface);
   border-radius: 8px;
-  background: var(--panel);
+  background: var(--surface);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
 }
 
@@ -315,9 +340,9 @@
   align-items: center;
   gap: 2px;
   padding: 2px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--background);
   border-radius: 999px;
-  background: var(--panel-soft);
+  background: var(--surface);
 }
 
 .pipeline-view-tabs button {
@@ -326,15 +351,15 @@
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.8rem;
   font-weight: 750;
 }
 
 .pipeline-view-tabs button.active {
-  background: var(--panel);
+  background: var(--surface);
   color: var(--accent);
-  box-shadow: 0 1px 3px rgba(31, 41, 55, 0.12);
+  box-shadow: 0 1px 3px rgba(31, 31, 31, 0.12);
 }
 
 @media (max-width: 700px) {
@@ -353,6 +378,6 @@
   align-items: center;
   min-height: 44px;
   padding: 7px 12px;
-  border-bottom: 1px solid var(--line);
-  background: var(--panel);
+  border-bottom: 1px solid var(--background);
+  background: var(--surface);
 }

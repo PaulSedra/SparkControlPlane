@@ -2,13 +2,13 @@
   min-width: 0;
   overflow-y: auto;
   border-left: 0;
-  background: var(--bg);
-  scrollbar-color: #40515a transparent;
+  background: var(--surface);
+  scrollbar-color: var(--text-secondary) transparent;
   scrollbar-width: thin;
 }
 
 .pipeline-detail-section {
-  padding: 10px 15px 12px;
+  padding: 10px 15px 12px 12px;
   border-bottom: 0;
 }
 
@@ -28,7 +28,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--text);
+  color: var(--text-primary);
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -67,7 +67,7 @@
 }
 
 .pipeline-detail-row dt {
-  color: #8299a6;
+  color: var(--text-secondary);
   font-size: 0.67rem;
 }
 
@@ -77,7 +77,7 @@
   gap: 4px;
   min-width: 0;
   margin: 0;
-  color: #e8ecf0;
+  color: var(--text-primary);
   font-size: 0.68rem;
 }
 

@@ -3,10 +3,8 @@
  * run performance placeholders.
  */
 
-import { ChevronDown, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { PipelineDetail, PipelineNode, PipelineRun } from '../../../../shared/pipelineRegistryTypes.ts';
-import { AppIcon } from '../../ui/AppIcon';
 import { pipelineTableNodes } from '../../../utils/pipelineAssets.ts';
 import { BottomPanelResizer } from './BottomPanelResizer';
 import { PipelineTablesView } from './PipelineTablesView';
@@ -108,15 +106,6 @@ export function PipelineTablesPanel({
                         </button>
                     )}
                 </nav>
-                <div className="bottom-panel-actions">
-                    <span aria-label="Graph event counts">ⓧ 0 ◇ 0 · ◉ 0</span>
-                    <button aria-label="Collapse bottom panel" title="Collapse bottom panel" type="button">
-                        <AppIcon icon={ChevronDown} size="status" />
-                    </button>
-                    <button aria-label="Close bottom panel" title="Close bottom panel" type="button">
-                        <AppIcon icon={X} size="status" />
-                    </button>
-                </div>
             </div>
 
             <PipelineTablesView

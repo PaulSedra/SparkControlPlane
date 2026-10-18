@@ -4,17 +4,17 @@
 
 .catalog-tree-item .app-icon {
   flex: 0 0 auto;
-  color: #8fa7b5;
+  color: var(--text-secondary);
 }
 
 .catalog-tree-node .app-icon {
   flex: 0 0 auto;
-  color: #8fa7b5;
+  color: var(--text-secondary);
 }
 
 .catalog-tree-node.selected {
   background: var(--accent-soft);
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .catalog-tree-node.selected .app-icon {
@@ -23,7 +23,7 @@
 
 .catalog-breadcrumbs .app-icon {
   flex: 0 0 auto;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .catalog-secondary-button {
@@ -33,10 +33,10 @@
   gap: 6px;
   min-height: 29px;
   padding: 4px 9px;
-  border: 1px solid var(--application-shell-border);
+  border: 1px solid var(--background);
   border-radius: 3px;
-  background: var(--panel);
-  color: var(--text);
+  background: var(--surface);
+  color: var(--text-primary);
   font-size: 0.7rem;
   font-weight: 650;
   white-space: nowrap;
@@ -49,10 +49,10 @@
   gap: 6px;
   min-height: 29px;
   padding: 4px 9px;
-  border: 1px solid var(--application-shell-border);
+  border: 1px solid var(--background);
   border-radius: 3px;
-  background: var(--panel);
-  color: var(--text);
+  background: var(--surface);
+  color: var(--text-primary);
   font-size: 0.7rem;
   font-weight: 650;
   white-space: nowrap;
@@ -60,12 +60,12 @@
 
 .catalog-secondary-button:hover {
   border-color: var(--accent);
-  background: var(--accent-soft);
+  background: var(--surface);
 }
 
 .catalog-icon-button:hover {
   border-color: var(--accent);
-  background: var(--accent-soft);
+  background: var(--surface);
 }
 
 .catalog-icon-button {
@@ -74,7 +74,7 @@
 }
 
 .catalog-tabs button.active {
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .catalog-tabs button.active {
@@ -82,9 +82,9 @@
 }
 
 .catalog-notice.error {
-  border-color: #6f3740;
-  background: rgba(91, 30, 39, 0.35);
-  color: var(--danger);
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+  color: var(--danger-text);
 }
 
 .catalog-detail-content .catalog-metadata-row dd {

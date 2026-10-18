@@ -2,7 +2,7 @@
   display: grid;
   min-height: 0;
   overflow: hidden;
-  background: var(--bg);
+  background: var(--background);
 }
 
 .catalog-layout {
@@ -19,7 +19,7 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: var(--bg);
+  background: var(--surface);
 }
 
 .catalog-main-body {
@@ -28,6 +28,10 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+}
+
+.catalog-page .catalog-main-body > .empty-state {
+  background: var(--surface);
 }
 
 .catalog-detail-grid {
@@ -40,7 +44,7 @@
 
 .catalog-blank-results {
   min-height: 260px;
-  border-top: 1px solid var(--application-shell-border);
+  border-top: 1px solid var(--background);
   opacity: 0.5;
 }
 

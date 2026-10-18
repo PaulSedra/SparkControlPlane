@@ -72,6 +72,6 @@ behavior is described in [components/README.md](components/README.md).
 | `styles/`                                       | Shared tokens, lifecycle status styling, and browser styles     |
 
 Shared API and persistence behavior is described in
-[`../server/README.md`](../server/README.md). Visual tokens, responsive
-breakpoints, and accessibility conventions are in the web-development skill's
-design-system reference.
+[`../server/README.md`](../server/README.md). Visual guidance is split across
+the typography, layout and spacing, state semantics, color, and icon references
+in the [web-development skill](../../.codex/skills/web-development/SKILL.md).

@@ -37,11 +37,11 @@ contains the detailed server architecture and behavior contracts.
 
 For now, the following table outlines compatibility based on manual testing.
 
-| Branch   | Status                                                                                                                    |
-|----------|---------------------------------------------------------------------------------------------------------------------------|
-| `main`   | [![Known working](https://img.shields.io/badge/Apache%20Spark%204.2.0-passing-brightgreen)](#build--compatibility-status) |
-|          | [![Known working](https://img.shields.io/badge/Apache%20Spark%204.1.3-passing-brightgreen)](#build--compatibility-status) |
-|          | [![Known working](https://img.shields.io/badge/Apache%20Polaris-passing-brightgreen)](#build--compatibility-status)       |
+| Branch | Status                                                                                                                    |
+|--------|---------------------------------------------------------------------------------------------------------------------------|
+| `main` | [![Known working](https://img.shields.io/badge/Apache%20Spark%204.2.0-passing-brightgreen)](#build--compatibility-status) |
+|        | [![Known working](https://img.shields.io/badge/Apache%20Spark%204.1.3-passing-brightgreen)](#build--compatibility-status) |
+|        | [![Known working](https://img.shields.io/badge/Apache%20Polaris-passing-brightgreen)](#build--compatibility-status)       |
 
 ## Feature Roadmap
 
@@ -126,7 +126,8 @@ source of truth; update that guide when its facts or contracts change.
 | Machine-readable HTTP schema                | [OpenAPI document](docs/openapi.json)                                                      |
 | Pipeline discovery and execution            | [Pipeline module](src/server/pipeline/README.md)                                           |
 | Web application                             | [Web application](src/web/README.md)                                                       |
-| UI icons                                    | [Icon inventory](docs/icon-inventory.md)                                                   |
+| UI colors                                   | [Color inventory](.codex/skills/web-development/references/color-inventory.md)             |
+| UI icons                                    | [Icon inventory](.codex/skills/web-development/references/icon-inventory.md)               |
 | Example projects                            | [Example pipelines](examples/README.md)                                                    |
 | Container files and local demo              | [Container configuration](docker/README.md)                                                |
 | Test suites                                 | [Test guide](tests/README.md) and [managed integration tests](tests/integration/README.md) |

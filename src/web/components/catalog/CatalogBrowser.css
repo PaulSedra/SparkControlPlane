@@ -4,8 +4,8 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  border-right: 1px solid var(--application-shell-border);
-  background: var(--panel);
+  border-right: 1px solid var(--background);
+  background: var(--surface);
 }
 
 .catalog-browser-header {
@@ -29,7 +29,7 @@
   min-height: 0;
   overflow: auto;
   padding: 4px 7px 16px;
-  scrollbar-color: #40515a transparent;
+  scrollbar-color: var(--text-secondary) transparent;
   scrollbar-width: thin;
 }
 
@@ -43,7 +43,7 @@
 
 .catalog-tree-empty {
   padding: 7px;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.68rem;
 }
 
@@ -55,11 +55,11 @@
   justify-content: space-between;
   min-height: 42px;
   padding: 0 12px;
-  border-bottom: 1px solid var(--application-shell-border);
+  border-bottom: 1px solid var(--background);
 }
 
 .catalog-tree-item small {
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.66rem;
 }
 
@@ -68,10 +68,10 @@
   min-height: 31px;
   margin: 9px 10px 7px;
   padding: 0 8px;
-  border: 1px solid var(--application-shell-border);
+  border: 1px solid var(--background);
   border-radius: 3px;
-  background: var(--bg);
-  color: var(--muted);
+  background: var(--surface);
+  color: var(--text-secondary);
 }
 
 .catalog-search:focus-within {
@@ -86,19 +86,19 @@
   border: 0;
   outline: 0;
   background: transparent;
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.72rem;
 }
 
 .catalog-search input::placeholder {
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .catalog-tree {
   min-height: 0;
   overflow: auto;
   padding: 4px 7px 16px;
-  scrollbar-color: #40515a transparent;
+  scrollbar-color: var(--text-secondary) transparent;
   scrollbar-width: thin;
 }
 
@@ -125,7 +125,7 @@
 .catalog-tree-root-label {
   gap: 5px;
   min-height: 28px;
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.72rem;
   font-weight: 700;
 }
@@ -133,7 +133,7 @@
 .catalog-tree-group-label {
   gap: 5px;
   min-height: 28px;
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.72rem;
   font-weight: 700;
 }
@@ -144,7 +144,7 @@
 
 .catalog-tree-group-label {
   padding: 0 5px 0 3px;
-  color: #92a5b1;
+  color: var(--text-secondary);
   font-size: 0.68rem;
   font-weight: 650;
 }
@@ -152,7 +152,7 @@
 .catalog-tree-branch {
   margin-left: 12px;
   padding-left: 9px;
-  border-left: 1px solid var(--application-shell-border);
+  border-left: 1px solid var(--background);
 }
 
 .catalog-tree-row {
@@ -194,7 +194,7 @@
   width: 23px;
   height: 26px;
   padding: 0;
-  color: #7d929d;
+  color: var(--text-secondary);
 }
 
 .catalog-tree-item {
@@ -203,7 +203,7 @@
   min-width: 0;
   min-height: 26px;
   padding: 4px 5px 4px 1px;
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .catalog-tree-item span {
@@ -226,15 +226,15 @@
 }
 
 .catalog-tree-item:hover {
-  color: #f0f5f7;
+  color: var(--text-primary);
 }
 
 .catalog-tree-expander:hover {
-  color: #f0f5f7;
+  color: var(--text-primary);
 }
 
 .catalog-tree-node:hover {
-  color: #f0f5f7;
+  color: var(--text-primary);
 }
 
 .catalog-tree-children {
@@ -242,7 +242,7 @@
   gap: 1px;
   margin-left: 15px;
   padding: 1px 0 2px 12px;
-  border-left: 1px solid var(--application-shell-border);
+  border-left: 1px solid var(--background);
 }
 
 .catalog-tree-node {
@@ -251,26 +251,26 @@
   min-height: 26px;
   padding: 4px 6px;
   border-radius: 3px;
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .catalog-tree-loading {
   height: 24px;
   margin: 2px 7px;
-  border-top: 1px solid var(--application-shell-border);
-  border-bottom: 1px solid var(--application-shell-border);
+  border-top: 1px solid var(--background);
+  border-bottom: 1px solid var(--background);
   opacity: 0.65;
 }
 
 .catalog-tree-error {
   padding: 5px 7px;
-  color: var(--danger);
+  color: var(--danger-text);
   font-size: 0.66rem;
 }
 
 .catalog-tree-blank {
   min-height: 180px;
-  border-top: 1px solid var(--application-shell-border);
+  border-top: 1px solid var(--background);
   opacity: 0.5;
 }
 
@@ -279,7 +279,7 @@
   .catalog-browser {
     max-height: 310px;
     border-right: 0;
-    border-bottom: 1px solid var(--application-shell-border);
+    border-bottom: 1px solid var(--background);
   }
 
 }

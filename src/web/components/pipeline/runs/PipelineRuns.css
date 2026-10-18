@@ -5,22 +5,18 @@
   min-height: 54px;
   padding: 8px 12px;
   border-bottom: 0;
-  background: var(--bg);
+  background: var(--surface);
 }
 
 .pipeline-runs-toolbar h2 {
   margin: 0;
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.78rem;
 }
 
 .pipeline-runs-toolbar span {
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.67rem;
-}
-
-.pipeline-runs-count {
-  color: var(--accent) !important;
 }
 
 .pipeline-runs-table-wrap {
@@ -38,8 +34,8 @@
 .pipeline-runs-table td {
   height: 34px;
   padding: 5px 10px;
-  border-bottom: 1px solid var(--application-shell-border);
-  color: #e8ecf0;
+  border-bottom: 1px solid var(--background);
+  color: var(--text-primary);
   font-size: 0.68rem;
   text-align: left;
   white-space: nowrap;
@@ -47,7 +43,7 @@
 
 .pipeline-runs-table th {
   height: 30px;
-  color: #93a7b1;
+  color: var(--text-secondary);
   font-size: 0.63rem;
   font-weight: 750;
 }
@@ -56,9 +52,12 @@
   cursor: pointer;
 }
 
-.pipeline-runs-table tbody tr:hover,
+.pipeline-runs-table tbody tr:hover {
+  background: var(--surface);
+}
+
 .pipeline-runs-table tbody tr.selected {
-  background: var(--bg);
+  background: var(--background);
 }
 
 .pipeline-runs-table td:first-child strong,
@@ -76,7 +75,7 @@
 
 .pipeline-runs-table td:first-child span {
   margin-top: 2px;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.62rem;
 }
 
@@ -93,5 +92,5 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: var(--bg);
+  background: var(--surface);
 }

@@ -3,7 +3,7 @@
   place-items: center;
   min-height: 100vh;
   padding: 24px;
-  background: var(--bg);
+  background: var(--background);
 }
 
 .not-found-page > div {
@@ -18,5 +18,5 @@
 }
 
 .not-found-page p {
-  color: var(--muted);
+  color: var(--text-secondary);
 }

@@ -4,7 +4,7 @@
 }
 
 .catalog-about-section h2 {
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.78rem;
   font-weight: 800;
 }
@@ -12,13 +12,13 @@
 .catalog-metadata-list {
   display: grid;
   margin: 0;
-  border-top: 1px solid var(--application-shell-border);
+  border-top: 1px solid var(--background);
 }
 
 .catalog-about-list {
   display: grid;
   margin: 0;
-  border-top: 1px solid var(--application-shell-border);
+  border-top: 1px solid var(--background);
 }
 
 .catalog-metadata-row {
@@ -27,11 +27,11 @@
   gap: 14px;
   min-width: 0;
   padding: 9px 0;
-  border-bottom: 1px solid var(--application-shell-border);
+  border-bottom: 1px solid var(--background);
 }
 
 .catalog-metadata-row dt {
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.68rem;
 }
 
@@ -39,7 +39,7 @@
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  color: var(--text);
+  color: var(--text-primary);
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 0.68rem;
   text-overflow: ellipsis;
@@ -51,14 +51,14 @@
   min-height: 0;
   overflow: auto;
   padding: 17px 15px 24px;
-  border-left: 1px solid var(--application-shell-border);
-  background: var(--panel);
+  border-left: 1px solid var(--background);
+  background: var(--surface);
 }
 
 .catalog-about-section {
   padding-bottom: 15px;
   margin-bottom: 15px;
-  border-bottom: 1px solid var(--application-shell-border);
+  border-bottom: 1px solid var(--background);
 }
 
 .catalog-about-section:last-child {
@@ -91,14 +91,14 @@
 
 .catalog-status-row {
   gap: 6px;
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.71rem;
   font-weight: 700;
 }
 
 .catalog-about-muted {
   margin: 7px 0 0;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.68rem;
   line-height: 1.5;
 }
@@ -113,9 +113,9 @@
   max-width: 100%;
   overflow: hidden;
   padding: 3px 6px;
-  border: 1px solid var(--application-shell-border);
+  border: 1px solid var(--background);
   border-radius: 3px;
-  background: var(--panel);
+  background: var(--surface);
   color: var(--accent);
   font-size: 0.65rem;
   text-overflow: ellipsis;
@@ -126,7 +126,7 @@
 
   .catalog-about {
     overflow: visible;
-    border-top: 1px solid var(--application-shell-border);
+    border-top: 1px solid var(--background);
     border-left: 0;
   }
 }

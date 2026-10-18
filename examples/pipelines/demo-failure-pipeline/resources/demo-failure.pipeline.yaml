@@ -1,0 +1,7 @@
+name: Demo Failure
+storage: file:///tmp/spark-control-plane-demo-checkpoints/demo-failure
+catalog: spark_catalog
+database: default
+libraries:
+  - glob:
+      include: ../python/**

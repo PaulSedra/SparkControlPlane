@@ -4,9 +4,9 @@
   justify-content: space-between;
   gap: 18px;
   min-height: 66px;
-  padding: 8px 14px 9px;
+  padding: 8px 24px 9px 0;
   border-bottom: 0;
-  background: var(--bg);
+  background: var(--surface);
 }
 
 .pipeline-title-group {
@@ -36,7 +36,7 @@
 
 .pipeline-breadcrumb span {
   padding: 0 4px;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .pipeline-title-row {
@@ -50,7 +50,7 @@
   max-width: min(48vw, 760px);
   margin: 0;
   overflow: hidden;
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 1.08rem;
   font-weight: 750;
   text-overflow: ellipsis;
@@ -80,30 +80,35 @@
   gap: 5px;
   min-height: 28px;
   padding: 4px 8px;
-  border: var(--application-shell-border-width) solid var(--application-shell-border);
+  border: var(--application-shell-border-width) solid var(--background);
   border-radius: 3px;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--surface);
+  color: var(--text-primary);
   font-size: 0.68rem;
   font-weight: 650;
   white-space: nowrap;
 }
 
-.dark-secondary-button:hover,
+.dark-secondary-button:hover {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
 .refresh-tables-button:hover,
 .event-log-button:hover {
-  border-color: #5c7483;
-  background: var(--bg);
+  border-color: var(--background);
+  background: var(--surface);
 }
 
 .dark-primary-button {
   border-color: var(--accent);
   background: var(--accent);
-  color: #fff;
+  color: var(--text-primary);
 }
 
-.dark-primary-button:hover {
-  background: var(--accent);
+.dark-primary-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 85%, white);
+  background: color-mix(in srgb, var(--accent) 85%, white);
 }
 
 .dark-primary-button:disabled {
@@ -139,14 +144,6 @@
   background: var(--accent);
 }
 
-.pipeline-run-main-button:hover:not(:disabled) {
-  background: var(--accent);
-}
-
-.pipeline-run-menu-toggle:hover:not(:disabled) {
-  background: var(--accent);
-}
-
 .pipeline-run-menu-toggle:focus-visible {
   position: relative;
   z-index: 1;
@@ -160,9 +157,9 @@
   display: grid;
   min-width: 248px;
   padding: 4px;
-  border: 1px solid var(--application-shell-border);
+  border: 1px solid var(--background);
   border-radius: 3px;
-  background: var(--bg);
+  background: var(--background);
   box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
 }
 
@@ -175,7 +172,7 @@
   border: 0;
   border-radius: 2px;
   background: transparent;
-  color: var(--text);
+  color: var(--text-primary);
   text-align: left;
   font-size: 0.7rem;
   font-weight: 650;
@@ -183,7 +180,7 @@
 
 .pipeline-run-menu button:hover,
 .pipeline-run-menu button:focus-visible {
-  background: var(--nav);
+  background: var(--surface);
 }
 
 .pipeline-run-toolbar {
@@ -192,15 +189,15 @@
   align-items: center;
   gap: 7px;
   min-height: 38px;
-  padding: 5px 14px;
+  padding: 5px 14px 5px 0;
   border-bottom: 0;
-  background: var(--bg);
-  color: var(--muted);
+  background: var(--surface);
+  color: var(--text-secondary);
   font-size: 0.7rem;
 }
 
 .run-toolbar-label {
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .run-picker {
@@ -213,10 +210,10 @@
   gap: 7px;
   min-height: 27px;
   padding: 3px 7px;
-  border: 1px solid var(--application-shell-border);
+  border: 1px solid var(--background);
   border-radius: 3px;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--surface);
+  color: var(--text-primary);
   font-size: 0.7rem;
 }
 
@@ -242,9 +239,9 @@
   max-height: 300px;
   overflow-y: auto;
   padding: 4px;
-  border: 1px solid var(--application-shell-border);
+  border: 1px solid var(--background);
   border-radius: 3px;
-  background: var(--bg);
+  background: var(--background);
   box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
 }
 
@@ -258,36 +255,39 @@
   border: 0;
   border-radius: 2px;
   background: transparent;
-  color: var(--text);
+  color: var(--text-primary);
   text-align: left;
   font-size: 0.7rem;
 }
 
-.run-picker-menu button:hover,
+.run-picker-menu button:hover {
+  background: var(--surface);
+}
+
 .run-picker-menu button.selected {
-  background: var(--nav);
+  background: var(--accent-soft);
 }
 
 .run-picker-empty {
   padding: 12px 8px;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .refresh-tables-button {
   min-height: 27px;
   border-color: transparent;
-  background: transparent;
-  color: var(--text);
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 .refresh-tables-button.active {
   border-color: var(--accent);
   background: var(--accent-soft);
-  color: #dff2ff;
+  color: var(--text-primary);
 }
 
 .refresh-tables-button + svg {
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .pipeline-selection-bar {
@@ -302,9 +302,9 @@
   width: fit-content;
   max-width: calc(100% - 28px);
   padding: 4px;
-  border: 1px solid var(--application-shell-border);
+  border: 1px solid var(--background);
   border-radius: 5px;
-  background: var(--bg);
+  background: var(--surface);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.42);
 }
 
@@ -318,7 +318,7 @@
   min-height: 27px;
   border: 1px solid transparent;
   border-radius: 3px;
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.68rem;
   font-weight: 650;
   white-space: nowrap;
@@ -326,7 +326,7 @@
 
 .pipeline-selection-count {
   padding: 4px 8px;
-  background: var(--bg);
+  background: var(--background);
 }
 
 .pipeline-selection-action {
@@ -336,8 +336,8 @@
 
 .pipeline-selection-action:hover,
 .pipeline-selection-action:focus-visible {
-  border-color: var(--application-shell-border);
-  background: var(--bg);
+  border-color: var(--background);
+  background: var(--surface);
 }
 
 .pipeline-selection-action:disabled {
@@ -348,19 +348,19 @@
 .pipeline-selection-clear {
   width: 27px;
   padding: 0;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .pipeline-selection-clear:hover,
 .pipeline-selection-clear:focus-visible {
-  border-color: var(--application-shell-border);
-  background: var(--bg);
-  color: var(--text);
+  border-color: var(--background);
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 .pipeline-blank-results {
   min-height: 0;
-  background: var(--bg);
+  background: var(--background);
 }
 
 .pipeline-header {
@@ -369,8 +369,8 @@
   justify-content: space-between;
   min-height: 58px;
   padding: 8px 20px;
-  border-bottom: 1px solid var(--line);
-  background: var(--panel);
+  border-bottom: 1px solid var(--background);
+  background: var(--surface);
 }
 
 .pipeline-header h1 {

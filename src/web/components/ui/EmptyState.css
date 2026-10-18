@@ -2,10 +2,10 @@
   min-height: 100%;
   border: 0;
   border-radius: 0;
-  background: var(--bg);
-  color: var(--muted);
+  background: var(--surface);
+  color: var(--text-secondary);
 }
 
 .application-shell .empty-state strong {
-  color: var(--text);
+  color: var(--text-primary);
 }

@@ -1,6 +1,6 @@
 .jobs-pipelines-app-shell {
   min-height: 100vh;
-  background: var(--bg);
+  background: var(--background);
 }
 
 .jobs-pipelines-app-shell > .db-route-shell {
@@ -10,7 +10,7 @@
 .jobs-pipelines-page {
   min-height: 100vh;
   padding: 0;
-  background: var(--bg);
+  background: var(--background);
 }
 
 .jobs-pipelines-shell {
@@ -18,7 +18,7 @@
   overflow: visible;
   border: 0;
   border-radius: 5px;
-  background: var(--panel);
+  background: var(--surface);
 }
 
 .jobs-pipelines-header {
@@ -31,7 +31,7 @@
 
 .jobs-pipelines-header h1 {
   margin: 0;
-  color: #111827;
+  color: var(--text-primary);
   font-size: 1.22rem;
   font-weight: 800;
   line-height: 1.2;
@@ -46,7 +46,7 @@
   align-items: end;
   min-height: 32px;
   padding: 0 14px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--background);
 }
 
 .jobs-pipelines-tabs button {
@@ -55,14 +55,14 @@
   border: 0;
   border-bottom: 2px solid transparent;
   background: transparent;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.76rem;
   font-weight: 750;
 }
 
 .jobs-pipelines-tabs button.active {
   border-bottom-color: var(--accent);
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .jobs-pipelines-toolbar {
@@ -80,10 +80,10 @@
 .jobs-pipelines-icon-button,
 .jobs-pipelines-create-button {
   min-height: 29px;
-  border: 1px solid var(--application-shell-border);
+  border: 1px solid var(--background);
   border-radius: 4px;
-  background: var(--panel);
-  color: #24364b;
+  background: var(--surface);
+  color: var(--text-primary);
   font-size: 0.74rem;
   font-weight: 650;
 }
@@ -94,7 +94,7 @@
   gap: 6px;
   width: 190px;
   padding: 0 9px;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .jobs-pipelines-search input {
@@ -104,12 +104,12 @@
   border: 0;
   outline: 0;
   background: transparent;
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.74rem;
 }
 
 .jobs-pipelines-search input::placeholder {
-  color: #607086;
+  color: var(--text-secondary);
   opacity: 1;
 }
 
@@ -122,9 +122,9 @@
   min-height: 27px;
   padding: 4px 12px;
   border: 0;
-  border-right: 1px solid var(--application-shell-border);
+  border-right: 1px solid var(--background);
   background: transparent;
-  color: #24364b;
+  color: var(--text-primary);
   font-size: 0.74rem;
   font-weight: 650;
 }
@@ -159,13 +159,13 @@
 .jobs-pipelines-filter-button:hover,
 .jobs-pipelines-select-wrapper:hover,
 .jobs-pipelines-icon-button:hover {
-  border-color: #7f9bb7;
-  background: var(--accent-soft);
+  border-color: var(--background);
+  background: var(--surface);
 }
 
 .jobs-pipelines-select-wrapper {
   padding: 0 6px 0 8px;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .jobs-pipelines-filter-select {
@@ -176,7 +176,7 @@
   outline: 0;
   appearance: none;
   background: transparent;
-  color: #24364b;
+  color: var(--text-primary);
   cursor: pointer;
   font-size: 0.74rem;
   font-weight: 650;
@@ -195,12 +195,13 @@
 .jobs-pipelines-create-button {
   border-color: var(--accent);
   background: var(--accent);
-  color: #fff;
+  color: var(--text-primary);
   font-weight: 750;
 }
 
 .jobs-pipelines-create-button:hover {
-  background: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 85%, white);
+  background: color-mix(in srgb, var(--accent) 85%, white);
 }
 
 .jobs-pipelines-notice {
@@ -209,32 +210,32 @@
   gap: 7px;
   margin: 0 14px 8px;
   padding: 7px 9px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--background);
   border-radius: 4px;
   font-size: 0.76rem;
 }
 
 .jobs-pipelines-notice.error {
-  border-color: #f3b8b8;
+  border-color: var(--danger-border);
   background: var(--danger-soft);
-  color: var(--danger);
+  color: var(--danger-text);
 }
 
 .jobs-pipelines-notice.success {
-  border-color: #a7d7b9;
+  border-color: var(--success);
   background: var(--success-soft);
   color: var(--success);
 }
 
 .jobs-pipelines-blank-results {
   min-height: 240px;
-  border-top: 1px solid var(--application-shell-border);
+  border-top: 1px solid var(--background);
 }
 
 .jobs-pipelines-table-wrapper {
   width: 100%;
   overflow-x: auto;
-  border-top: 1px solid var(--application-shell-border);
+  border-top: 1px solid var(--background);
 }
 
 .jobs-pipelines-table {
@@ -280,26 +281,26 @@
 .jobs-pipelines-table td {
   height: 32px;
   padding: 5px 9px;
-  border-bottom: 1px solid var(--application-shell-border);
+  border-bottom: 1px solid var(--background);
   text-align: left;
   vertical-align: middle;
   white-space: nowrap;
 }
 
 .jobs-pipelines-table th {
-  color: #26384c;
+  color: var(--text-primary);
   font-size: 0.71rem;
   font-weight: 800;
 }
 
 .jobs-pipelines-table td {
   overflow: hidden;
-  color: #24364b;
+  color: var(--text-primary);
   font-size: 0.76rem;
 }
 
 .jobs-pipelines-table tbody tr:hover {
-  background: var(--accent-soft);
+  background: var(--surface);
 }
 
 .jobs-pipelines-sort-button {
@@ -344,17 +345,17 @@
   border: 0;
   border-radius: 4px;
   background: transparent;
-  color: #8295aa;
+  color: var(--text-secondary);
 }
 
 .jobs-pipelines-star-button:hover,
 .jobs-pipelines-row-action:hover {
-  background: var(--accent-soft);
+  background: var(--surface);
   color: var(--accent);
 }
 
 .jobs-pipelines-star-button.active {
-  color: #e6aa2f;
+  color: var(--accent);
 }
 
 .jobs-pipelines-star-button.active svg {
@@ -374,7 +375,7 @@
 }
 
 .jobs-pipelines-run-as-label {
-  color: #50657d;
+  color: var(--text-secondary);
 }
 
 .jobs-pipelines-tags {
@@ -389,16 +390,16 @@
   max-width: 118px;
   overflow: hidden;
   padding: 2px 6px;
-  border: 1px solid var(--application-shell-border);
+  border: 1px solid var(--background);
   border-radius: 4px;
-  background: #f3f5f8;
-  color: #32445a;
+  background: var(--background);
+  color: var(--text-primary);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .jobs-pipelines-no-tags {
-  color: #8a99aa;
+  color: var(--text-secondary);
 }
 
 .jobs-pipelines-recent-runs {
@@ -418,7 +419,7 @@
 }
 
 .jobs-pipelines-run-slot {
-  border-bottom: 2px solid var(--application-shell-border);
+  border-bottom: 2px solid var(--background);
 }
 
 .jobs-pipelines-row-actions {
@@ -428,7 +429,7 @@
 }
 
 .jobs-pipelines-row-action--primary {
-  color: #5f7388;
+  color: var(--text-secondary);
 }
 
 .jobs-pipelines-menu-wrapper {
@@ -443,10 +444,10 @@
   display: grid;
   width: 178px;
   padding: 4px;
-  border: 1px solid var(--application-shell-border);
+  border: 1px solid var(--background);
   border-radius: 4px;
-  background: var(--panel);
-  box-shadow: 0 8px 18px rgba(31, 41, 55, 0.16);
+  background: var(--surface);
+  box-shadow: 0 8px 18px rgba(31, 31, 31, 0.16);
 }
 
 .jobs-pipelines-action-menu button {
@@ -454,18 +455,18 @@
   border: 0;
   border-radius: 3px;
   background: transparent;
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.74rem;
   text-align: left;
 }
 
 .jobs-pipelines-action-menu button:hover {
-  background: var(--accent-soft);
+  background: var(--surface);
   color: var(--accent);
 }
 
 .jobs-pipelines-action-menu button:disabled {
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .jobs-pipelines-runs-table th:nth-child(1) {
@@ -500,7 +501,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.65rem;
   text-align: left;
   text-overflow: ellipsis;
@@ -515,12 +516,16 @@
 .jobs-pipelines-cancel-button {
   min-height: 24px;
   padding: 2px 7px;
-  border: 1px solid #e2b4b0;
+  border: 1px solid var(--danger-border);
   border-radius: 4px;
-  background: #fff7f6;
-  color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger-text);
   font-size: 0.7rem;
   font-weight: 650;
+}
+
+.jobs-pipelines-cancel-button:hover:not(:disabled) {
+  background: var(--danger-soft-hover);
 }
 
 @media (max-width: 1100px) {

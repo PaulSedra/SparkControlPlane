@@ -9,84 +9,84 @@
 }
 
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-shell {
-  background: var(--bg);
+  background: var(--surface);
 }
 
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-page,
 :root[data-theme='dark'] .jobs-pipelines-app-shell {
-  background: var(--nav);
+  background: var(--background);
 }
 
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-header h1,
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-table th,
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-table td {
-  color: #e8ecf0;
+  color: var(--text-primary);
 }
 
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-table tbody tr,
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-table thead,
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-toolbar {
-  background: var(--bg);
+  background: var(--surface);
 }
 
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-segmented-control,
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-filter-button,
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-select-wrapper,
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-icon-button {
-  border-color: var(--application-shell-border);
-  background: var(--bg);
-  color: #e8ecf0;
+  border-color: var(--background);
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-segmented-control button,
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-filter-select {
-  color: #e8ecf0;
+  color: var(--text-primary);
 }
 
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-filter-button.active,
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-segmented-control button.active {
   border-color: var(--accent);
   background: var(--accent-soft);
-  color: #e8ecf0;
+  color: var(--text-primary);
 }
 
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-filter-button:hover,
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-icon-button:hover,
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-segmented-control button:hover {
-  border-color: var(--application-shell-border);
-  background: var(--bg);
-  color: #e8ecf0;
+  border-color: var(--background);
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-table tbody tr:hover {
-  background: var(--bg);
+  background: var(--surface);
 }
 
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-table-wrapper,
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-blank-results {
-  border-top-color: var(--application-shell-border);
+  border-top-color: var(--background);
 }
 
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-tag {
-  border-color: var(--application-shell-border);
-  background: var(--bg);
-  color: #e8ecf0;
+  border-color: var(--background);
+  background: var(--background);
+  color: var(--text-primary);
 }
 
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-star-button:hover,
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-row-action:hover {
-  background: var(--bg);
-  color: #e8ecf0;
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-action-menu {
-  border-color: var(--application-shell-border);
-  background: var(--bg);
+  border-color: var(--background);
+  background: var(--surface);
 }
 
 :root[data-theme='dark'] .jobs-pipelines-app-shell .jobs-pipelines-action-menu button:hover {
-  background: var(--nav);
-  color: #e8ecf0;
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 /* Keep the page elements visibly separated while the shell remains borderless. */

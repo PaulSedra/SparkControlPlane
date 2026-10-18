@@ -5,8 +5,8 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 .pipeline-workspace-header,
@@ -15,8 +15,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid var(--application-shell-border);
-  background: var(--bg);
+  border-bottom: 1px solid var(--background);
+  background: var(--surface);
 }
 
 .pipeline-workspace-header {
@@ -47,14 +47,14 @@
 }
 
 .pipeline-workspace-file strong {
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.75rem;
   font-weight: 650;
 }
 
 .pipeline-workspace-file > div > span,
 .pipeline-workspace-titlebar span {
-  color: #8da3ae;
+  color: var(--text-secondary);
   font-size: 0.64rem;
 }
 
@@ -64,10 +64,10 @@
   place-items: center;
   width: 28px;
   height: 28px;
-  border: 1px solid var(--application-shell-border);
+  border: 1px solid var(--background);
   border-radius: 3px;
-  background: var(--bg);
-  color: #9fb5bf;
+  background: var(--background);
+  color: var(--text-secondary);
 }
 
 .pipeline-workspace-readonly {
@@ -75,18 +75,18 @@
   align-items: center;
   flex: 0 0 auto;
   gap: 5px;
-  color: #8da3ae;
+  color: var(--text-secondary);
   font-size: 0.65rem;
 }
 
 .pipeline-workspace-titlebar {
   min-height: 38px;
   padding: 6px 14px;
-  background: var(--bg);
+  background: var(--surface);
 }
 
 .pipeline-workspace-titlebar strong {
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.7rem;
   font-weight: 650;
 }
@@ -98,31 +98,31 @@
   gap: 7px;
   min-height: 0;
   padding: 24px;
-  color: #9fb1ba;
+  color: var(--text-secondary);
   font-size: 0.72rem;
   text-align: center;
 }
 
 .pipeline-workspace-empty .app-icon {
   justify-self: center;
-  color: #6e8792;
+  color: var(--text-secondary);
 }
 
 .pipeline-workspace-empty strong {
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.78rem;
 }
 
 .pipeline-workspace-message.error {
-  color: #ed9ba1;
+  color: var(--danger-text);
 }
 
 .pipeline-source-code {
   min-height: 0;
   overflow: auto;
   padding: 13px 0 28px;
-  background: var(--bg);
-  color: #e8ecf0;
+  background: var(--surface);
+  color: var(--text-primary);
   counter-reset: source-line;
   font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
   font-size: 0.7rem;
@@ -138,7 +138,7 @@
 
 .pipeline-source-line > span {
   padding-right: 12px;
-  color: #526770;
+  color: var(--text-secondary);
   text-align: right;
   user-select: none;
 }

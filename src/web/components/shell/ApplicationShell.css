@@ -14,7 +14,7 @@
 .db-route-content {
   min-width: 0;
   min-height: 0;
-  background: var(--panel);
+  background: var(--surface);
 }
 
 .db-side-bar {
@@ -23,13 +23,13 @@
   gap: 8px;
   min-width: 0;
   padding: 10px 8px;
-  border-right: 1px solid var(--line);
-  background: var(--panel-soft);
+  border-right: 1px solid var(--background);
+  background: var(--surface);
 }
 
 .db-side-bar-caption {
   padding: 0 8px;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -48,14 +48,14 @@
   min-height: 34px;
   padding: 7px 8px;
   border-radius: 4px;
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.84rem;
   font-weight: 650;
   text-decoration: none;
 }
 
 .db-side-bar-list a:hover {
-  background: var(--panel);
+  background: var(--accent-hover);
 }
 
 .db-side-bar-list a.active {
@@ -75,8 +75,8 @@
   gap: 18px;
   height: 54px;
   padding: 0 20px;
-  border-bottom: 1px solid var(--line);
-  background: var(--panel);
+  border-bottom: 1px solid var(--background);
+  background: var(--surface);
 }
 
 
@@ -86,12 +86,11 @@
   --application-shell-gutter: 6px;
   --application-top-bar-height: 44px;
   --application-shell-border-width: 2px;
-  --application-shell-border: var(--nav);
   color-scheme: dark;
   min-height: 100vh;
   padding: var(--application-shell-gutter);
-  background: var(--nav);
-  color: var(--text);
+  background: var(--background);
+  color: var(--text-primary);
 }
 
 .application-shell .db-top-bar {
@@ -100,12 +99,12 @@
   gap: 14px;
   padding: 0 10px;
   border-bottom: 0;
-  background: var(--nav);
+  background: var(--background);
 }
 
 .application-shell .brand-lockup {
   gap: 7px;
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.82rem;
 }
 
@@ -144,22 +143,22 @@
   border: 0;
   border-radius: 3px;
   background: transparent;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .application-shell .sidebar-toggle .app-icon {
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .application-shell .sidebar-toggle:hover,
 .application-shell .sidebar-toggle:focus-visible {
-  background: #6b6870;
-  color: var(--text);
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 .application-shell .sidebar-toggle:hover .app-icon,
 .application-shell .sidebar-toggle:focus-visible .app-icon {
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .application-shell .sidebar-toggle:focus-visible {
@@ -177,10 +176,10 @@
   gap: 7px;
   height: 27px;
   padding: 0 9px;
-  border: var(--application-shell-border-width) solid var(--application-shell-border);
+  border: var(--application-shell-border-width) solid var(--background);
   border-radius: 4px;
-  background: var(--bg);
-  color: #7f95a4;
+  background: var(--surface);
+  color: var(--text-secondary);
 }
 
 .global-search input {
@@ -189,16 +188,16 @@
   border: 0;
   outline: 0;
   background: transparent;
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.72rem;
 }
 
 .global-search input::placeholder {
-  color: #7f95a4;
+  color: var(--text-secondary);
 }
 
 .global-search kbd {
-  color: #7892a4;
+  color: var(--text-secondary);
   font-size: 0.62rem;
   white-space: nowrap;
 }
@@ -209,13 +208,12 @@
 }
 
 .global-workspace-name {
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.72rem;
 }
 
 .global-icon-button,
 .pipeline-header-icon,
-.bottom-panel-actions button,
 .pipeline-output-actions button,
 .detail-copy-button {
   display: inline-grid;
@@ -223,7 +221,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .global-icon-button {
@@ -233,10 +231,9 @@
 
 .global-icon-button:hover,
 .pipeline-header-icon:hover,
-.bottom-panel-actions button:hover,
 .pipeline-output-actions button:hover,
 .detail-copy-button:hover {
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .pipeline-output-actions button:disabled {
@@ -250,8 +247,8 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(--panel-soft);
-  color: var(--muted);
+  background: var(--surface);
+  color: var(--text-secondary);
 }
 
 .global-avatar .app-icon {
@@ -271,25 +268,25 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .application-shell .global-theme-toggle {
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .global-theme-toggle:hover {
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .application-shell .global-theme-toggle:hover {
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .application-shell .db-route-shell {
   grid-template-columns: 180px minmax(0, 1fr);
   height: calc(100vh - var(--application-top-bar-height) - var(--application-shell-gutter) - var(--application-shell-gutter));
-  background: var(--nav);
+  background: var(--background);
 }
 
 .application-shell.sidebar-collapsed .db-route-shell {
@@ -307,7 +304,7 @@
   min-height: 0;
   overflow: hidden;
   border-radius: var(--application-content-radius);
-  background: var(--bg);
+  background: var(--background);
 }
 
 .workspace-back-link {
@@ -321,7 +318,7 @@
 }
 
 .workspace-back-link:hover {
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .application-shell .db-side-bar {
@@ -330,8 +327,8 @@
   padding: 8px 5px 8px 6px;
   overflow: hidden;
   border-right: 0;
-  background: var(--nav);
-  color: var(--text);
+  background: var(--background);
+  color: var(--text-primary);
 }
 
 .db-side-bar-create {
@@ -340,23 +337,25 @@
   gap: 7px;
   min-height: 32px;
   padding: 6px 10px;
-  border: 1px solid #493640;
+  border: 1px solid var(--accent);
   border-radius: 4px;
-  background: #3a2832;
-  color: #f5dbe4;
+  background: var(--accent-soft);
+  color: var(--text-primary);
   text-align: left;
   font-size: 0.76rem;
   font-weight: 750;
 }
 
 .db-side-bar-create:hover {
-  background: #4c303d;
+  border-color: var(--background);
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 .db-side-bar-scroll {
   min-height: 0;
   overflow-y: auto;
-  scrollbar-color: #40515a transparent;
+  scrollbar-color: var(--text-secondary) transparent;
   scrollbar-width: thin;
 }
 
@@ -368,7 +367,7 @@
 
 .application-shell .db-side-bar-caption {
   padding: 5px 9px 3px;
-  color: #91a3af;
+  color: var(--text-secondary);
   font-size: 0.65rem;
   font-weight: 750;
   letter-spacing: 0.04em;
@@ -387,15 +386,15 @@
   min-height: 27px;
   padding: 5px 8px;
   border-radius: 3px;
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.72rem;
   font-weight: 550;
   text-decoration: none;
 }
 
 .db-side-bar-link:hover {
-  background: #6b6870;
-  color: #f0f5f7;
+  background: var(--accent-hover);
+  color: var(--text-primary);
 }
 
 .db-side-bar-link.active {
@@ -438,7 +437,7 @@
     display: flex;
     align-items: center;
     border-right: 0;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--background);
     padding: 6px 12px;
   }
 
@@ -458,7 +457,7 @@
   .application-shell .db-side-bar {
     display: grid;
     align-content: start;
-    border-right: 1px solid var(--line);
+    border-right: 1px solid var(--background);
     border-bottom: 0;
     padding: 10px 8px;
   }

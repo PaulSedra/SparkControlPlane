@@ -57,7 +57,6 @@ export function PipelineRunsView({
                     <h2>Runs</h2>
                     <span>Run history for this pipeline.</span>
                 </div>
-                <span className="pipeline-runs-count">{orderedRuns.length} runs</span>
             </header>
             <div className="pipeline-runs-table-wrap">
                 <table className="pipeline-runs-table">

@@ -10,9 +10,14 @@ src/web/AGENTS.md; for shared component work, also read
 src/web/components/README.md and src/web/components/AGENTS.md. Keep page, route,
 and component architecture in the local READMEs rather than here.
 
-Use the design-system reference for typography, colors, spacing, breakpoints,
-iconography, status presentation, and table behavior. Prefer shared components
-and existing responsive patterns over page-local variants. Use AppIcon for
+Use the [typography reference](references/typography.md) for font sizes and
+weights, the [layout and spacing reference](references/layout-and-spacing.md)
+for geometry, breakpoints, and table behavior, and the
+[state semantics reference](references/state-semantics.md) for status
+presentation. Use the [color inventory](references/color-inventory.md) for the
+complete palette and the [icon inventory](references/icon-inventory.md) for
+the rendered icon list. Prefer shared components and existing responsive
+patterns over page-local variants. Use AppIcon for
 Lucide icons, StatusIcon for state icons, and preserve accessible labels and
 keyboard behavior. Preserve loading, empty, and error states when changing a
 page or reusable component, and check the affected interaction at the shared

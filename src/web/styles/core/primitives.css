@@ -41,14 +41,14 @@
   align-items: end;
   gap: 10px;
   padding: 10px 20px;
-  border-bottom: 1px solid var(--line);
-  background: #fbfcfe;
+  border-bottom: 1px solid var(--background);
+  background: var(--surface);
 }
 
 .connection-drawer input {
   min-height: 34px;
   padding: 6px 8px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--background);
   border-radius: 4px;
 }
 
@@ -56,7 +56,7 @@
 .pipeline-actions,
 .compact-toggle,
 .muted-text {
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.86rem;
 }
 
@@ -65,17 +65,22 @@
   gap: 7px;
   min-height: 32px;
   padding: 6px 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--background);
   border-radius: 4px;
-  background: var(--panel);
-  color: var(--text);
+  background: var(--surface);
+  color: var(--text-primary);
   font-weight: 650;
 }
 
 .primary-button {
   border-color: var(--accent);
   background: var(--accent);
-  color: #fff;
+  color: var(--text-primary);
+}
+
+.primary-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 85%, white);
+  background: color-mix(in srgb, var(--accent) 85%, white);
 }
 
 button:disabled {
@@ -90,19 +95,19 @@ button:disabled {
   gap: 8px;
   min-height: 240px;
   padding: 36px 24px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--background);
   border-radius: 4px;
-  background: var(--panel-soft);
-  color: var(--muted);
+  background: var(--surface);
+  color: var(--text-secondary);
   text-align: center;
 }
 
 .empty-state svg {
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .empty-state strong {
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.98rem;
   font-weight: 800;
 }
@@ -118,15 +123,15 @@ button:disabled {
   gap: 8px;
   margin: 12px 20px 0;
   padding: 9px 11px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--background);
   border-radius: 4px;
-  background: var(--panel-soft);
-  color: var(--muted);
+  background: var(--surface);
+  color: var(--text-secondary);
   font-size: 0.84rem;
 }
 
 .notice.error {
-  border-color: #f3b8b8;
+  border-color: var(--danger-border);
   background: var(--danger-soft);
-  color: var(--danger);
+  color: var(--danger-text);
 }

@@ -31,7 +31,7 @@
   height: 10px;
   padding: 1px;
   border-radius: 50%;
-  background-color: var(--panel);
+  background-color: var(--surface);
 }
 
 .pipeline-app-shell .node-type-icon .data-asset-icon__view {

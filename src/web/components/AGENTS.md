@@ -1,8 +1,9 @@
 # Component change instructions
 
 Read the [component architecture](README.md), the
-[web application architecture](../README.md), and the web-development skill's
-design-system reference before changing shared or feature components.
+[web application architecture](../README.md), and the relevant topic
+references listed in the [web-development skill](../../../.codex/skills/web-development/SKILL.md)
+before changing shared or feature components.
 
 - Use `AppIcon` for Lucide icons, `StatusIcon` for lifecycle icons and colors,
   and `EmptyState` for valid zero-data or waiting states.

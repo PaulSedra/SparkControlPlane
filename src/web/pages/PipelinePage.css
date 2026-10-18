@@ -1,5 +1,5 @@
 .crumb {
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.8rem;
 }
 
@@ -24,20 +24,23 @@
   min-width: 0;
   min-height: 0;
   padding: 0;
-  background: var(--panel);
+  background: var(--surface);
 }
 .pipeline-app-shell .db-workspace {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) minmax(220px, var(--pipeline-bottom-panel-height, 330px));
   height: 100%;
   min-height: 0;
-  background: var(--panel);
+  background: var(--surface);
+}
+.pipeline-app-shell .db-route-content {
+  padding-left: 14px;
 }
 .pipeline-upper {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 365px;
   gap: 10px;
-  padding: 10px;
+  padding: 10px 10px 10px 0;
   min-height: 0;
   overflow: hidden;
 }
@@ -47,7 +50,7 @@
   min-height: 0;
   overflow: hidden;
   padding: 0;
-  background: var(--panel);
+  background: var(--surface);
 }
 .db-workspace {
   width: 100%;

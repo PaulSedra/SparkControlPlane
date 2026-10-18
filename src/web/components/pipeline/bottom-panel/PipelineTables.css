@@ -5,10 +5,10 @@
   min-height: 0;
   overflow: visible;
   position: relative;
-  margin: 0 10px 10px;
-  border-top: 1px solid var(--application-shell-border);
-  border-bottom: 1px solid var(--application-shell-border);
-  background: var(--bg);
+  margin: 0 10px 10px 0;
+  border-top: 1px solid var(--background);
+  border-bottom: 1px solid var(--background);
+  background: var(--surface);
 }
 
 .bottom-panel-resizer {
@@ -32,7 +32,7 @@
   width: 38px;
   height: 2px;
   border-radius: 999px;
-  background: var(--muted);
+  background: var(--text-secondary);
   content: "";
   opacity: 0.78;
   transform: translateX(-50%);
@@ -71,7 +71,7 @@
   border: 0;
   border-bottom: 2px solid transparent;
   background: transparent;
-  color: #8499a5;
+  color: var(--text-secondary);
   font-size: 0.7rem;
   font-weight: 750;
   cursor: pointer;
@@ -79,7 +79,7 @@
 
 .bottom-panel-tabs button.active {
   border-bottom-color: var(--accent);
-  color: #e2edf1;
+  color: var(--text-primary);
 }
 
 .bottom-panel-tabs button:focus-visible {
@@ -90,15 +90,6 @@
 .bottom-panel-tabs span {
   color: inherit;
   font-size: 0.63rem;
-}
-
-.bottom-panel-actions {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 0 9px;
-  color: #7f95a2;
-  font-size: 0.67rem;
 }
 
 .bottom-panel-toolbar {
@@ -117,9 +108,10 @@
   width: 320px;
   height: 28px;
   padding: 0 7px;
-  border: 1px solid var(--application-shell-border);
+  border: 1px solid var(--background);
   border-radius: 3px;
-  color: #8ba0aa;
+  background: var(--surface);
+  color: var(--text-secondary);
 }
 
 .bottom-panel-search input {
@@ -128,12 +120,12 @@
   border: 0;
   outline: 0;
   background: transparent;
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.7rem;
 }
 
 .bottom-panel-search input::placeholder {
-  color: #7e929e;
+  color: var(--text-secondary);
 }
 
 .bottom-panel-select {
@@ -143,9 +135,9 @@
   gap: 4px;
   height: 28px;
   padding: 0 6px;
-  border: 1px solid var(--application-shell-border);
+  border: 1px solid var(--background);
   border-radius: 3px;
-  color: #9aadb6;
+  color: var(--text-secondary);
   font-size: 0.67rem;
 }
 
@@ -156,7 +148,7 @@
   border: 0;
   outline: 0;
   background: transparent;
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.67rem;
 }
 
@@ -184,8 +176,8 @@
 .pipeline-sample-data-table td {
   height: 28px;
   padding: 4px 8px;
-  border-bottom: 1px solid var(--application-shell-border);
-  color: #e8ecf0;
+  border-bottom: 1px solid var(--background);
+  color: var(--text-primary);
   font-size: 0.68rem;
   text-align: left;
   white-space: nowrap;
@@ -194,7 +186,7 @@
 .pipeline-panel-table th,
 .pipeline-sample-data-table th {
   height: 29px;
-  color: #93a7b1;
+  color: var(--text-secondary);
   font-size: 0.63rem;
   font-weight: 750;
 }
@@ -208,7 +200,7 @@
 
 .pipeline-panel-table tbody tr:hover,
 .pipeline-sample-data-table tbody tr:hover {
-  background: var(--bg);
+  background: var(--surface);
 }
 
 .pipeline-output-name {
@@ -242,14 +234,14 @@
 
 .sample-data-toolbar {
   justify-content: space-between;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.7rem;
 }
 
 .sample-data-toolbar strong {
   min-width: 0;
   overflow: hidden;
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 0.7rem;
   font-weight: 650;
   text-overflow: ellipsis;
@@ -265,14 +257,14 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--bg);
+  background: var(--surface);
   white-space: nowrap;
 }
 
 .pipeline-sample-data-table th small {
   display: block;
   margin-top: 2px;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.58rem;
   font-weight: 400;
 }
@@ -301,9 +293,9 @@
   display: grid;
   min-width: 176px;
   padding: 4px;
-  border: 1px solid var(--application-shell-border);
+  border: 1px solid var(--background);
   border-radius: 3px;
-  background: var(--bg);
+  background: var(--background);
   box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
 }
 
@@ -324,12 +316,12 @@
 
 .pipeline-output-action-menu button:hover,
 .pipeline-output-action-menu button:focus-visible {
-  background: var(--nav);
+  background: var(--surface);
 }
 
 .sort-indicator,
 .info-dot {
-  color: #7e96a2;
+  color: var(--text-secondary);
 }
 
 .info-dot {
@@ -337,7 +329,7 @@
   place-items: center;
   width: 12px;
   height: 12px;
-  border: var(--application-shell-border-width) solid var(--application-shell-border);
+  border: var(--application-shell-border-width) solid var(--background);
   border-radius: 50%;
   font-size: 0.53rem;
 }
@@ -355,7 +347,7 @@
 .bottom-panel-empty {
   display: block;
   padding: 18px 10px;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.7rem;
 }
 

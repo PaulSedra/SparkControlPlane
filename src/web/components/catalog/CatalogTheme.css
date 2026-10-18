@@ -1,47 +1,47 @@
 :root[data-theme='light'] .catalog-app-shell .catalog-search {
-  border-color: var(--application-shell-border);
-  background: #ffffff;
+  border-color: var(--background);
+  background: var(--surface);
 }
 
 :root[data-theme='light'] .catalog-app-shell .catalog-column-filter {
-  border-color: var(--application-shell-border);
-  background: #ffffff;
+  border-color: var(--background);
+  background: var(--surface);
 }
 
 :root[data-theme='light'] .catalog-app-shell .catalog-browser {
-  background: #ffffff;
+  background: var(--surface);
 }
 
 :root[data-theme='light'] .catalog-app-shell .catalog-about {
-  background: #ffffff;
+  background: var(--surface);
 }
 
 :root[data-theme='light'] .catalog-app-shell .catalog-tree-root-label {
-  color: #344454;
+  color: var(--text-primary);
 }
 
 :root[data-theme='light'] .catalog-app-shell .catalog-tree-item {
-  color: #344454;
+  color: var(--text-primary);
 }
 
 :root[data-theme='light'] .catalog-app-shell .catalog-tree-node {
-  color: #344454;
+  color: var(--text-primary);
 }
 
 :root[data-theme='light'] .catalog-app-shell .catalog-tree-group-label {
-  color: #607086;
+  color: var(--text-secondary);
 }
 
 :root[data-theme='light'] .catalog-app-shell .catalog-tree-item small {
-  color: #607086;
+  color: var(--text-secondary);
 }
 
 :root[data-theme='light'] .catalog-app-shell .catalog-tree-branch {
-  border-color: var(--application-shell-border);
+  border-color: var(--background);
 }
 
 :root[data-theme='light'] .catalog-app-shell .catalog-tree-children {
-  border-color: var(--application-shell-border);
+  border-color: var(--background);
 }
 
 :root[data-theme='light'] .catalog-app-shell .catalog-tree-row.selected {
@@ -55,25 +55,25 @@
 }
 
 :root[data-theme='light'] .catalog-app-shell .catalog-definition {
-  background: #f3f6fa;
+  background: var(--surface);
 }
 
 :root[data-theme='light'] .catalog-app-shell .catalog-title-icon {
-  background: #f3f6fa;
+  background: var(--surface);
 }
 
 :root[data-theme='light'] .catalog-app-shell .catalog-tag {
-  background: #f3f6fa;
+  background: var(--surface);
 }
 
 :root[data-theme='light'] .catalog-app-shell .catalog-definition pre {
-  color: #344454;
+  color: var(--text-primary);
 }
 
 :root[data-theme='light'] .catalog-app-shell .catalog-column-table th {
-  background: #f3f6fa;
+  background: var(--surface);
 }
 
 :root[data-theme='light'] .catalog-app-shell .catalog-sample-table th {
-  background: #f3f6fa;
+  background: var(--surface);
 }
