@@ -279,7 +279,7 @@ jobs:
             if [[ -z "$issue_total" ]]; then
               issue_total="$(jq -er '.paging.total' <<<"$issues")"
             fi
-            jq -r '.issues[]? | .cleanCodeAttributeCategory // "UNCLASSIFIED"' \
+            jq '.issues[]? | .cleanCodeAttributeCategory // "UNCLASSIFIED"' \
               <<<"$issues" >> "$attribute_categories"
             if (( page * page_size >= issue_total )); then
               break
