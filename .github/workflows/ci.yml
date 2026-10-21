@@ -105,21 +105,42 @@ jobs:
         run: |
           set -euo pipefail
 
-          admin_password="$(openssl rand -hex 32)"
-          curl --fail --silent --show-error \
+          sonar_request() {
+            local response_file status
+            response_file="$(mktemp)"
+            if ! status="$(curl --silent --show-error --output "$response_file" --write-out '%{http_code}' "$@")"; then
+              rm -f "$response_file"
+              return 1
+            fi
+
+            if [[ ! "$status" =~ ^2[0-9]{2}$ ]]; then
+              echo "SonarQube API returned HTTP $status." >&2
+              if [[ -s "$response_file" ]]; then
+                jq -r 'if type == "object" and (.errors? != null) then .errors[].msg else (.message // .) end' "$response_file" >&2 || cat "$response_file" >&2
+              fi
+              rm -f "$response_file"
+              return 1
+            fi
+
+            cat "$response_file"
+            rm -f "$response_file"
+          }
+
+          admin_password="Aa9!$(openssl rand -hex 32)"
+          sonar_request \
             --user admin:admin \
             --data-urlencode login=admin \
             --data-urlencode previousPassword=admin \
             --data-urlencode "password=$admin_password" \
             "$SONAR_HOST_URL/api/users/change_password" >/dev/null
 
-          curl --fail --silent --show-error \
+          sonar_request \
             --user "admin:$admin_password" \
             --data-urlencode project=SparkControlPlane \
             --data-urlencode "name=Spark Control Plane" \
             "$SONAR_HOST_URL/api/projects/create" >/dev/null
 
-          token_response="$(curl --fail --silent --show-error \
+          token_response="$(sonar_request \
             --user "admin:$admin_password" \
             --data-urlencode "name=github-actions-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
             --data-urlencode type=USER_TOKEN \
