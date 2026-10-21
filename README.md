@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/license/apache-2-0)
 [![Version](https://img.shields.io/badge/version-0.1.1-orange)](package.json)
-[![Test coverage 74.82%](https://img.shields.io/badge/coverage-74.82%25-yellowgreen)](tests/README.md)
+[![Test coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FPaulSedra%2FSparkControlPlane%2Fcoverage%2Fcoverage.json)](tests/README.md)
 [![Source lines](https://img.shields.io/badge/source_lines-29%2C523-informational)](src/)
 [![Node.js](https://img.shields.io/badge/Node.js-24.19.0-339933)](package.json)
 

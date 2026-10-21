@@ -1,6 +1,9 @@
 name: CI
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
@@ -52,6 +55,8 @@ jobs:
     name: Sonar metrics
     needs: core-checks
     continue-on-error: true
+    outputs:
+      coverage: ${{ steps.read-sonar-metrics.outputs.coverage }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -197,7 +202,8 @@ jobs:
               -Dsonar.sourceEncoding=UTF-8 \
               -Dsonar.javascript.lcov.reportPaths=coverage/sonar/server-unit.lcov,coverage/sonar/web-unit.lcov,coverage/sonar/contract.lcov,coverage/sonar/integration-base.lcov
 
-      - name: Read issue count and coverage
+      - name: Read Sonar issue details and coverage
+        id: read-sonar-metrics
         env:
           SONAR_HOST_URL: http://127.0.0.1:9000
         run: |
@@ -237,18 +243,96 @@ jobs:
             --header "Authorization: Bearer $SONAR_TOKEN" \
             --get \
             --data-urlencode component=SparkControlPlane \
-            --data-urlencode metricKeys=violations,coverage \
+            --data-urlencode metricKeys=violations,coverage,software_quality_security_issues,software_quality_reliability_issues,software_quality_maintainability_issues,software_quality_blocker_issues,software_quality_high_issues,software_quality_medium_issues,software_quality_low_issues,software_quality_info_issues \
             "$SONAR_HOST_URL/api/measures/component")"
           issue_count="$(jq -er '.component.measures[] | select(.metric == "violations") | .value' <<<"$measures")"
           coverage="$(jq -er '.component.measures[] | select(.metric == "coverage") | .value' <<<"$measures")"
 
+          measure_value() {
+            jq -r --arg metric "$1" \
+              '[.component.measures[]? | select(.metric == $metric) | .value][0] // "0"' \
+              <<<"$measures"
+          }
+
+          security_issues="$(measure_value software_quality_security_issues)"
+          reliability_issues="$(measure_value software_quality_reliability_issues)"
+          maintainability_issues="$(measure_value software_quality_maintainability_issues)"
+          blocker_issues="$(measure_value software_quality_blocker_issues)"
+          high_issues="$(measure_value software_quality_high_issues)"
+          medium_issues="$(measure_value software_quality_medium_issues)"
+          low_issues="$(measure_value software_quality_low_issues)"
+          info_issues="$(measure_value software_quality_info_issues)"
+
+          attribute_categories="$(mktemp)"
+          trap 'rm -f "$attribute_categories"' EXIT
+          page_size=500
+          page=1
+          issue_total=""
+          while :; do
+            issues="$(curl --fail --silent --show-error \
+              --header "Authorization: Bearer $SONAR_TOKEN" \
+              --get \
+              --data-urlencode componentKeys=SparkControlPlane \
+              --data-urlencode "ps=$page_size" \
+              --data-urlencode "p=$page" \
+              "$SONAR_HOST_URL/api/issues/search")"
+            if [[ -z "$issue_total" ]]; then
+              issue_total="$(jq -er '.paging.total' <<<"$issues")"
+            fi
+            jq -r '.issues[]? | .cleanCodeAttributeCategory // "UNCLASSIFIED"' \
+              <<<"$issues" >> "$attribute_categories"
+            if (( page * page_size >= issue_total )); then
+              break
+            fi
+            page=$((page + 1))
+          done
+
+          attribute_counts="$(jq -s 'group_by(.) | map({(.[0]): length}) | add // {}' \
+            "$attribute_categories")"
+          consistency_issues="$(jq -r '.CONSISTENT // 0' <<<"$attribute_counts")"
+          intentionality_issues="$(jq -r '.INTENTIONAL // 0' <<<"$attribute_counts")"
+          adaptability_issues="$(jq -r '.ADAPTABLE // 0' <<<"$attribute_counts")"
+          responsibility_issues="$(jq -r '.RESPONSIBLE // 0' <<<"$attribute_counts")"
+          unclassified_issues="$(jq -r '.UNCLASSIFIED // 0' <<<"$attribute_counts")"
+
+          if [[ ! "$coverage" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+            echo "SonarQube returned an invalid coverage value." >&2
+            exit 1
+          fi
+          echo "coverage=$coverage" >> "$GITHUB_OUTPUT"
+
           {
             echo "## SonarQube metrics"
             echo
-            echo "| Metric | Value |"
+            echo "| Software Quality | Issues |"
             echo "| --- | ---: |"
-            echo "| Issues across source files | $issue_count |"
+            echo "| Security | $security_issues |"
+            echo "| Reliability | $reliability_issues |"
+            echo "| Maintainability | $maintainability_issues |"
+            echo
+            echo "| Severity | Issues |"
+            echo "| --- | ---: |"
+            echo "| Blocker | $blocker_issues |"
+            echo "| High | $high_issues |"
+            echo "| Medium | $medium_issues |"
+            echo "| Low | $low_issues |"
+            echo "| Info | $info_issues |"
+            echo
+            echo "| Code Attribute | Issues |"
+            echo "| --- | ---: |"
+            echo "| Consistency | $consistency_issues |"
+            echo "| Intentionality | $intentionality_issues |"
+            echo "| Adaptability | $adaptability_issues |"
+            echo "| Responsibility | $responsibility_issues |"
+            if (( unclassified_issues > 0 )); then
+              echo "| Unclassified | $unclassified_issues |"
+            fi
+            echo
+            echo "Total issues across source files: **$issue_count**"
+            echo
             echo "| Code coverage | ${coverage}% |"
+            echo
+            echo "Software Quality counts can overlap when a rule affects more than one quality."
             echo
             echo "This run uses a temporary SonarQube instance; findings are not retained after the job ends."
           } >> "$GITHUB_STEP_SUMMARY"
@@ -261,3 +345,52 @@ jobs:
             echo
             echo "Metrics could not be produced in the temporary SonarQube instance. This job is non-blocking."
           } >> "$GITHUB_STEP_SUMMARY"
+
+  publish-coverage:
+    name: Publish coverage badge data
+    needs: sonar-metrics
+    if: >-
+      ${{ needs.sonar-metrics.outputs.coverage != '' &&
+          (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+          github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: coverage-badge
+      cancel-in-progress: false
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Update coverage badge branch
+        env:
+          COVERAGE: ${{ needs.sonar-metrics.outputs.coverage }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          coverage_ref="$(git ls-remote --heads origin refs/heads/coverage)"
+          if [[ -n "$coverage_ref" ]]; then
+            git fetch --no-tags origin refs/heads/coverage
+            git switch --force-create coverage FETCH_HEAD
+          else
+            git switch --orphan coverage
+            git rm -rf --ignore-unmatch .
+          fi
+
+          printf '{"schemaVersion":1,"label":"coverage","message":"%s%%","color":"yellowgreen"}\n' \
+            "$COVERAGE" > coverage.json
+          git add coverage.json
+          if git diff --cached --quiet; then
+            echo "Coverage badge data is already up to date."
+            exit 0
+          fi
+
+          git commit -m "Update coverage badge"
+          git push origin coverage
