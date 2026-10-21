@@ -38,4 +38,181 @@ jobs:
         run: npm run lint
 
       - name: Run full test suite
-        run: npm test
+        run: npm run test:coverage
+
+      - name: Upload Sonar coverage reports
+        uses: actions/upload-artifact@v7
+        with:
+          name: sonar-coverage
+          path: coverage/sonar/*.lcov
+          if-no-files-found: error
+          retention-days: 1
+
+  sonar-metrics:
+    name: Sonar metrics
+    needs: core-checks
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      sonarqube:
+        image: sonarqube:26.10.0.133078-community
+        ports:
+          - 9000:9000
+        env:
+          SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          cache: npm
+
+      - name: Install dependencies without running package scripts
+        run: npm ci --ignore-scripts
+
+      - name: Download Sonar coverage reports
+        uses: actions/download-artifact@v7
+        with:
+          name: sonar-coverage
+          path: coverage/sonar
+
+      - name: Wait for temporary SonarQube
+        env:
+          SONAR_HOST_URL: http://127.0.0.1:9000
+        run: |
+          for attempt in $(seq 1 90); do
+            response="$(curl --silent --max-time 2 "$SONAR_HOST_URL/api/system/status" 2>/dev/null || true)"
+            if jq -e '.status == "UP"' >/dev/null 2>&1 <<<"$response"; then
+              echo "Temporary SonarQube is ready."
+              exit 0
+            fi
+            sleep 4
+          done
+
+          echo "Temporary SonarQube did not become ready within six minutes." >&2
+          exit 1
+
+      - name: Create temporary SonarQube project and token
+        env:
+          SONAR_HOST_URL: http://127.0.0.1:9000
+        run: |
+          set -euo pipefail
+
+          admin_password="$(openssl rand -hex 32)"
+          curl --fail --silent --show-error \
+            --user admin:admin \
+            --data-urlencode login=admin \
+            --data-urlencode previousPassword=admin \
+            --data-urlencode "password=$admin_password" \
+            "$SONAR_HOST_URL/api/users/change_password" >/dev/null
+
+          curl --fail --silent --show-error \
+            --user "admin:$admin_password" \
+            --data-urlencode project=SparkControlPlane \
+            --data-urlencode "name=Spark Control Plane" \
+            "$SONAR_HOST_URL/api/projects/create" >/dev/null
+
+          token_response="$(curl --fail --silent --show-error \
+            --user "admin:$admin_password" \
+            --data-urlencode "name=github-actions-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --data-urlencode type=USER_TOKEN \
+            "$SONAR_HOST_URL/api/user_tokens/generate")"
+          sonar_token="$(jq -er '.token' <<<"$token_response")"
+          echo "::add-mask::$sonar_token"
+          printf 'SONAR_TOKEN=%s\n' "$sonar_token" >> "$GITHUB_ENV"
+
+      - name: Scan PR snapshot as the temporary main branch
+        env:
+          SONAR_HOST_URL: http://127.0.0.1:9000
+        run: |
+          env -u CI \
+            -u GITHUB_ACTIONS \
+            -u GITHUB_EVENT_NAME \
+            -u GITHUB_EVENT_PATH \
+            -u GITHUB_BASE_REF \
+            -u GITHUB_HEAD_REF \
+            -u GITHUB_REF \
+            -u GITHUB_REF_NAME \
+            -u GITHUB_REPOSITORY \
+            -u GITHUB_SHA \
+            -u GITHUB_WORKFLOW \
+            npx --yes @sonar/scan@5.0.2 \
+              -Dsonar.projectKey=SparkControlPlane \
+              -Dsonar.projectName="Spark Control Plane" \
+              -Dsonar.sources=src \
+              -Dsonar.tests=tests \
+              -Dsonar.python.version=3.10,3.12 \
+              '-Dsonar.coverage.exclusions=src/**/*.py' \
+              -Dsonar.javascript.lcov.reportPaths=coverage/sonar/server-unit.lcov,coverage/sonar/web-unit.lcov,coverage/sonar/contract.lcov,coverage/sonar/integration-base.lcov
+
+      - name: Read issue count and coverage
+        env:
+          SONAR_HOST_URL: http://127.0.0.1:9000
+        run: |
+          set -euo pipefail
+
+          task_id="$(sed -n 's/^ceTaskId=//p' .scannerwork/report-task.txt)"
+          if [[ -z "$task_id" ]]; then
+            echo "SonarScanner did not write a compute-engine task ID." >&2
+            exit 1
+          fi
+
+          task_status=""
+          for attempt in $(seq 1 120); do
+            task_response="$(curl --fail --silent --show-error \
+              --header "Authorization: Bearer $SONAR_TOKEN" \
+              --get --data-urlencode "id=$task_id" \
+              "$SONAR_HOST_URL/api/ce/task")"
+            task_status="$(jq -r '.task.status // empty' <<<"$task_response")"
+            case "$task_status" in
+              SUCCESS)
+                break
+                ;;
+              ERROR|CANCELED)
+                jq -r '.task.errorMessage // "SonarQube analysis failed."' <<<"$task_response" >&2
+                exit 1
+                ;;
+            esac
+            sleep 2
+          done
+
+          if [[ "$task_status" != "SUCCESS" ]]; then
+            echo "SonarQube did not finish analysis within four minutes." >&2
+            exit 1
+          fi
+
+          measures="$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer $SONAR_TOKEN" \
+            --get \
+            --data-urlencode component=SparkControlPlane \
+            --data-urlencode metricKeys=violations,coverage \
+            "$SONAR_HOST_URL/api/measures/component")"
+          issue_count="$(jq -er '.component.measures[] | select(.metric == "violations") | .value' <<<"$measures")"
+          coverage="$(jq -er '.component.measures[] | select(.metric == "coverage") | .value' <<<"$measures")"
+
+          {
+            echo "## SonarQube metrics"
+            echo
+            echo "| Metric | Value |"
+            echo "| --- | ---: |"
+            echo "| Issues across source files | $issue_count |"
+            echo "| JavaScript/TypeScript coverage | ${coverage}% |"
+            echo
+            echo "This run uses a temporary SonarQube instance; findings are not retained after the job ends."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report Sonar metrics unavailable
+        if: ${{ failure() }}
+        run: |
+          {
+            echo "## SonarQube metrics"
+            echo
+            echo "Metrics could not be produced in the temporary SonarQube instance. This job is non-blocking."
+          } >> "$GITHUB_STEP_SUMMARY"
