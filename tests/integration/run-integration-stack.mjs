@@ -114,7 +114,16 @@ async function runSuite() {
         return;
     }
 
-    await runManagedTests(['tests/integration/postgres/*.test.ts'], managedTestContext);
+    // Keep these tests outside the schema used by the running control-plane worker.
+    const postgresTestEnvironment = {
+        ...testEnvironment,
+        POSTGRES_SCHEMA: `spark_control_plane_tests_${runId.replaceAll('-', '_')}`,
+    };
+    await runManagedTests(
+        ['tests/integration/postgres/*.test.ts'],
+        managedTestContext,
+        postgresTestEnvironment,
+    );
     await runManagedTests(['tests/integration/polaris/*.test.ts'], managedTestContext);
     await runManagedTests(['tests/integration/spark/liveSpark.test.ts'], managedTestContext);
     runContainerSuite();
