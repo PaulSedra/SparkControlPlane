@@ -140,6 +140,29 @@ jobs:
             --data-urlencode "name=Spark Control Plane" \
             "$SONAR_HOST_URL/api/projects/create" >/dev/null
 
+          profiles_response="$(sonar_request \
+            --user "admin:$admin_password" \
+            --get \
+            --data-urlencode ps=500 \
+            "$SONAR_HOST_URL/api/qualityprofiles/search")"
+          mapfile -t comprehensive_languages < <(
+            jq -r '.profiles[]? | select(.name == "Sonar way comprehensive") | .language' \
+              <<<"$profiles_response" | sort -u
+          )
+          if [[ "${#comprehensive_languages[@]}" -eq 0 ]]; then
+            echo "Sonar way comprehensive profiles were not found in the temporary SonarQube instance." >&2
+            exit 1
+          fi
+
+          for language in "${comprehensive_languages[@]}"; do
+            sonar_request \
+              --user "admin:$admin_password" \
+              --data-urlencode project=SparkControlPlane \
+              --data-urlencode "language=$language" \
+              --data-urlencode "qualityProfile=Sonar way comprehensive" \
+              "$SONAR_HOST_URL/api/qualityprofiles/add_project" >/dev/null
+          done
+
           token_response="$(sonar_request \
             --user "admin:$admin_password" \
             --data-urlencode "name=github-actions-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
@@ -167,10 +190,11 @@ jobs:
             npx --yes @sonar/scan@5.0.2 \
               -Dsonar.projectKey=SparkControlPlane \
               -Dsonar.projectName="Spark Control Plane" \
-              -Dsonar.sources=src \
+              -Dsonar.sources=. \
               -Dsonar.tests=tests \
+              '-Dsonar.exclusions=tests/**/*' \
               -Dsonar.python.version=3.10,3.12 \
-              '-Dsonar.coverage.exclusions=src/**/*.py' \
+              -Dsonar.sourceEncoding=UTF-8 \
               -Dsonar.javascript.lcov.reportPaths=coverage/sonar/server-unit.lcov,coverage/sonar/web-unit.lcov,coverage/sonar/contract.lcov,coverage/sonar/integration-base.lcov
 
       - name: Read issue count and coverage
@@ -224,7 +248,7 @@ jobs:
             echo "| Metric | Value |"
             echo "| --- | ---: |"
             echo "| Issues across source files | $issue_count |"
-            echo "| JavaScript/TypeScript coverage | ${coverage}% |"
+            echo "| Code coverage | ${coverage}% |"
             echo
             echo "This run uses a temporary SonarQube instance; findings are not retained after the job ends."
           } >> "$GITHUB_STEP_SUMMARY"
