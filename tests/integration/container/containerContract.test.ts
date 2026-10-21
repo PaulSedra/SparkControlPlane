@@ -83,12 +83,38 @@ test('local demo starts PostgreSQL, Spark, and SCP with checked-in default-catal
     assert.match(pythonSpec, /database: default/);
 });
 
-test('runtime image installs the official Spark Pipelines CLI in the SCP container', async () => {
+test('CI and runtime image install Spark from shared pinned requirements', async () => {
     const dockerfile = await fs.readFile(path.join(root, 'Dockerfile'), 'utf8');
     const compose = await fs.readFile(path.join(root, 'compose.yaml'), 'utf8');
-    assert.match(dockerfile, /ARG PYSPARK_VERSION=4\.2\.0/);
-    assert.match(compose, /PYSPARK_VERSION: 4\.2\.0/);
-    assert.match(dockerfile, /pyspark\[pipelines\]==\$\{PYSPARK_VERSION\}/);
+    const devCompose = await fs.readFile(path.join(root, 'compose.dev.yaml'), 'utf8');
+    const requirements = await fs.readFile(path.join(root, 'requirements.txt'), 'utf8');
+    const workflow = await fs.readFile(
+        path.join(root, '.github', 'workflows', 'ci.yml'),
+        'utf8',
+    );
+    assert.match(dockerfile, /COPY requirements\.txt \/tmp\/requirements\.txt/);
+    assert.match(
+        dockerfile,
+        /pip install --no-cache-dir --disable-pip-version-check -r \/tmp\/requirements\.txt/,
+    );
+    assert.match(
+        workflow,
+        /python -m pip install --disable-pip-version-check --no-cache-dir -r requirements\.txt/,
+    );
+    for (const required of [
+        'pyspark[pipelines]==4.2.0',
+        'pandas==2.3.3',
+        'pyarrow==20.0.0',
+        'grpcio==1.76.0',
+        'grpcio-status==1.76.0',
+        'googleapis-common-protos==1.72.0',
+        'zstandard==0.25.0',
+    ]) {
+        assert.ok(requirements.split(/\r?\n/).includes(required));
+    }
+    assert.doesNotMatch(dockerfile, /PYSPARK_VERSION/);
+    assert.doesNotMatch(compose, /PYSPARK_VERSION/);
+    assert.doesNotMatch(devCompose, /PYSPARK_VERSION/);
     assert.doesNotMatch(dockerfile, /openssh-client|spark_pipeline_run\.py|spark_pipeline_cli\.py/);
 });
 
@@ -106,7 +132,6 @@ test('integration Compose owns pinned PostgreSQL, Polaris, Spark, and control-pl
         'polaris-bootstrap:',
         'spark-connect:',
         'SPARK_CONNECT_URL: sc://spark-connect:15002',
-        'PYSPARK_VERSION: 4.2.0',
         'POSTGRES_SSLMODE: disable',
         'iceberg-spark-runtime-4.1_2.13:1.11.0',
         'condition: service_completed_successfully',
@@ -115,6 +140,7 @@ test('integration Compose owns pinned PostgreSQL, Polaris, Spark, and control-pl
     ]) {
         assert.ok(compose.includes(required), `compose.integration.yaml must contain ${required}`);
     }
+    assert.doesNotMatch(compose, /PYSPARK_VERSION/);
     assert.match(sparkDockerfile, /apache\/spark:4\.1\.2-python3@sha256:/);
     assert.match(sparkDockerfile, /pandas==2\.3\.3/);
     assert.match(sparkDockerfile, /pyarrow==20\.0\.0/);

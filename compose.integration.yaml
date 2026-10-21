@@ -132,7 +132,6 @@ services:
         APP_VERSION: 0.1.0
         NODE_IMAGE: node:24.19.0-bookworm-slim
         PYTHON_IMAGE: python:3.10.12-slim-bookworm
-        PYSPARK_VERSION: 4.2.0
     image: ${INTEGRATION_CONTROL_PLANE_IMAGE:?The integration control-plane image is required}
     depends_on:
       postgres:

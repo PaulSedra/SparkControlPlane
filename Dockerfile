@@ -16,7 +16,6 @@ COPY . .
 RUN npm run build
 
 FROM ${PYTHON_IMAGE} AS runtime
-ARG PYSPARK_VERSION=4.2.0
 ARG APP_VERSION=0.1.0
 ARG IMAGE_SOURCE=not-specified
 ARG IMAGE_LICENSES=UNLICENSED
@@ -33,17 +32,12 @@ ENV NODE_ENV=production \
     PYSPARK_DRIVER_PYTHON=/usr/local/bin/python \
     CONTROL_PLANE_PORT=8080
 
+COPY requirements.txt /tmp/requirements.txt
+
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes openjdk-17-jre-headless tini \
     && rm -rf /var/lib/apt/lists/* \
-    && pip install --no-cache-dir \
-        "pyspark[pipelines]==${PYSPARK_VERSION}" \
-        "pandas==2.3.3" \
-        "pyarrow==20.0.0" \
-        "grpcio==1.76.0" \
-        "grpcio-status==1.76.0" \
-        "googleapis-common-protos==1.72.0" \
-        "zstandard==0.25.0"
+    && pip install --no-cache-dir --disable-pip-version-check -r /tmp/requirements.txt
 
 WORKDIR /app
 COPY --from=node-runtime /usr/local/bin/node /usr/local/bin/node
