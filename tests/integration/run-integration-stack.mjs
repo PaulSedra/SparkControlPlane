@@ -52,18 +52,18 @@ try {
         await seedPolaris();
 
         phase = 'starting Spark Connect';
-        await composeUp(['spark-connect'], true);
+        await composeUp(['spark-connect'], { build: true });
         await waitForHealthy('spark-connect', 240_000);
         await seedSparkTable();
     }
 
     if (suite === 'all' || suite === 'polaris' || suite === 'spark') {
-        // Avoid rebuilding Spark Connect after its `/tmp` warehouse is seeded.
+        // Keep Spark Connect's seeded `/tmp` warehouse in its existing container.
         phase = 'building the control-plane target';
         composeBuild();
 
         phase = 'starting the control-plane target';
-        await composeUp(['control-plane']);
+        await composeUp(['control-plane'], { noDependencies: true });
         await waitForHealthy('control-plane', 180_000);
         await waitForHttp(`${managedTestContext.controlPlaneBaseUrl}/ready`, 180_000);
     } else if (suite === 'container' || suite === 'upgrade') {
@@ -230,10 +230,13 @@ async function seedSparkTable() {
     ]);
 }
 
-async function composeUp(services, build = false) {
+async function composeUp(services, { build = false, noDependencies = false } = {}) {
     const args = ['up', '--detach'];
     if (build) {
         args.push('--build');
+    }
+    if (noDependencies) {
+        args.push('--no-deps');
     }
     args.push(...services);
     runCompose(args);
