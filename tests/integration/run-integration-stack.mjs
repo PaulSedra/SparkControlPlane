@@ -58,8 +58,12 @@ try {
     }
 
     if (suite === 'all' || suite === 'polaris' || suite === 'spark') {
+        // Avoid rebuilding Spark Connect after its `/tmp` warehouse is seeded.
+        phase = 'building the control-plane target';
+        composeBuild();
+
         phase = 'starting the control-plane target';
-        await composeUp(['control-plane'], true);
+        await composeUp(['control-plane']);
         await waitForHealthy('control-plane', 180_000);
         await waitForHttp(`${managedTestContext.controlPlaneBaseUrl}/ready`, 180_000);
     } else if (suite === 'container' || suite === 'upgrade') {
