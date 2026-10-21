@@ -1,0 +1,96 @@
+name: Report Build integration result
+
+on:
+  workflow_call:
+    inputs:
+      spark_version:
+        required: true
+        type: string
+      polaris_version:
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  actions: read
+
+jobs:
+  report:
+    name: Report Spark compatibility result
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Read the Build integration result
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPSTREAM_HEAD_SHA: ${{ github.sha }}
+          UPSTREAM_EVENT: ${{ github.event_name }}
+          UPSTREAM_BRANCH: ${{ github.ref_name }}
+          SPARK_VERSION: ${{ inputs.spark_version }}
+          POLARIS_VERSION: ${{ inputs.polaris_version }}
+        run: |
+          set -euo pipefail
+
+          check_name="Apache Spark $SPARK_VERSION"
+          if [[ -n "$POLARIS_VERSION" ]]; then
+            check_name+=", Polaris $POLARIS_VERSION"
+          fi
+
+          runs_url="$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs"
+          run_id=""
+          run_attempt=""
+          delay=10
+          for attempt in $(seq 1 120); do
+            runs="$(curl --fail --silent --show-error \
+              --header "Accept: application/vnd.github+json" \
+              --header "Authorization: Bearer $GH_TOKEN" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              --get \
+              --data-urlencode "head_sha=$UPSTREAM_HEAD_SHA" \
+              --data-urlencode "branch=$UPSTREAM_BRANCH" \
+              --data-urlencode "event=$UPSTREAM_EVENT" \
+              --data-urlencode per_page=100 \
+              "$runs_url")"
+            build_run="$(jq -c --arg sha "$UPSTREAM_HEAD_SHA" --arg event "$UPSTREAM_EVENT" \
+              --arg branch "$UPSTREAM_BRANCH" \
+              '[.workflow_runs[] | select(.head_sha == $sha and .head_branch == $branch and .event == $event)] | sort_by(.run_number) | .[-1] // empty' \
+              <<<"$runs")"
+
+            if [[ -n "$build_run" && "$build_run" != "null" ]]; then
+              status="$(jq -r '.status' <<<"$build_run")"
+              if [[ "$status" == "completed" ]]; then
+                run_id="$(jq -er '.id' <<<"$build_run")"
+                run_attempt="$(jq -er '.run_attempt' <<<"$build_run")"
+                break
+              fi
+              echo "Waiting for Build run $status to finish."
+            else
+              echo "Waiting for the Build run for $UPSTREAM_EVENT commit $UPSTREAM_HEAD_SHA to start."
+            fi
+
+            sleep "$delay"
+            if (( delay < 60 )); then
+              delay=$((delay * 2))
+              if (( delay > 60 )); then
+                delay=60
+              fi
+            fi
+          done
+
+          if [[ -z "$run_id" ]]; then
+            echo "::error::The matching Build run did not complete within the reporting window."
+            exit 1
+          fi
+
+          jobs="$(curl --fail --silent --show-error \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$run_id/attempts/$run_attempt/jobs?per_page=100")"
+          result="$(jq -er --arg name "$check_name" '[.jobs[] | select(.name == $name) | .conclusion][-1] // "unknown"' <<<"$jobs")"
+          if [[ "$result" != "success" ]]; then
+            echo "::error::$check_name did not pass in Build (result: $result)."
+            exit 1
+          fi
+
+          echo "$check_name passed in Build."

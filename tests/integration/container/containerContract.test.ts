@@ -124,6 +124,10 @@ test('integration Compose owns pinned PostgreSQL, Polaris, Spark, and control-pl
         path.join(root, 'docker', 'integration', 'spark', 'Dockerfile'),
         'utf8',
     );
+    const sparkStartupScript = await fs.readFile(
+        path.join(root, 'docker', 'integration', 'spark', 'start-connect-server.sh'),
+        'utf8',
+    );
     for (const required of [
         'postgres:16.4-bookworm@sha256:',
         'apache/polaris:1.7.0@sha256:',
@@ -133,7 +137,6 @@ test('integration Compose owns pinned PostgreSQL, Polaris, Spark, and control-pl
         'spark-connect:',
         'SPARK_CONNECT_URL: sc://spark-connect:15002',
         'POSTGRES_SSLMODE: disable',
-        'iceberg-spark-runtime-4.1_2.13:1.11.0',
         'condition: service_completed_successfully',
         'INTEGRATION_PIPELINES_PATH',
         'name: ${INTEGRATION_NETWORK_NAME:',
@@ -141,7 +144,12 @@ test('integration Compose owns pinned PostgreSQL, Polaris, Spark, and control-pl
         assert.ok(compose.includes(required), `compose.integration.yaml must contain ${required}`);
     }
     assert.doesNotMatch(compose, /PYSPARK_VERSION/);
-    assert.match(sparkDockerfile, /apache\/spark:4\.1\.2-python3@sha256:/);
+    assert.match(sparkDockerfile, /^ARG SPARK_BASE_IMAGE$/m);
+    assert.match(sparkDockerfile, /^FROM \$\{SPARK_BASE_IMAGE\}$/m);
+    assert.doesNotMatch(sparkDockerfile, /^ARG SPARK_BASE_IMAGE=/m);
+    assert.match(sparkStartupScript, /iceberg-spark-runtime-4\.1_2\.13:1\.11\.0/);
+    assert.match(sparkStartupScript, /spark\.sql\.catalogImplementation=in-memory/);
+    assert.match(sparkStartupScript, /spark\.sql\.defaultCatalog=spark_catalog/);
     assert.match(sparkDockerfile, /pandas==2\.3\.3/);
     assert.match(sparkDockerfile, /pyarrow==20\.0\.0/);
     assert.match(sparkDockerfile, /grpcio==1\.76\.0/);

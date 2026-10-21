@@ -1,6 +1,11 @@
-FROM apache/spark:4.1.2-python3@sha256:ac7efd6404ef99d6a28ea54ea74fc8ac69c420a7af83a4718b59fecad856e447
+# syntax=docker/dockerfile:1.8
+# check=skip=InvalidDefaultArgInFrom
+ARG SPARK_BASE_IMAGE
+FROM ${SPARK_BASE_IMAGE}
 
 USER root
+
+COPY --chmod=755 start-connect-server.sh /opt/integration/start-connect-server.sh
 
 RUN python3 -m pip install --no-cache-dir --disable-pip-version-check \
         "pandas==2.3.3" \

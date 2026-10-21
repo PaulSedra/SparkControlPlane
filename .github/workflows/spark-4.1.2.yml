@@ -1,0 +1,16 @@
+name: Build / Apache Spark 4.1.2
+
+on:
+  push:
+    branches:
+      - main
+      - branch-0.1
+
+permissions:
+  actions: read
+
+jobs:
+  report:
+    uses: ./.github/workflows/report-build-integration-result.yml
+    with:
+      spark_version: '4.1.2'

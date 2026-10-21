@@ -1,20 +1,22 @@
-name: CI
+name: Build
 
 on:
   push:
     branches:
       - main
+      - branch-0.1
   pull_request:
     branches:
       - main
+      - branch-0.1
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  core-checks:
-    name: Core checks
+  core-tests:
+    name: Core tests
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -40,8 +42,8 @@ jobs:
       - name: Run lint
         run: npm run lint
 
-      - name: Run full test suite
-        run: npm run test:coverage
+      - name: Run core test coverage
+        run: npm run test:coverage:core
 
       - name: Upload Sonar coverage reports
         uses: actions/upload-artifact@v7
@@ -51,12 +53,115 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  integration-tests:
+    name: ${{ matrix.suite_name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite_name: PostgreSQL integration
+            test_script: test:integration:postgres
+          - suite_name: Container integration
+            test_script: test:integration:container
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run integration tests
+        env:
+          TEST_SCRIPT: ${{ matrix.test_script }}
+        run: npm run "$TEST_SCRIPT"
+
+  spark-integration:
+    name: ${{ matrix.job_name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - job_name: Apache Spark 4.2.0
+            spark_version: '4.2.0'
+            test_script: test:integration:spark
+          - job_name: Apache Spark 4.1.3
+            spark_version: '4.1.3'
+            test_script: test:integration:spark
+          - job_name: Apache Spark 4.1.2
+            spark_version: '4.1.2'
+            test_script: test:integration:spark
+          - job_name: Apache Spark 4.2.0, Polaris 1.7
+            spark_version: '4.2.0'
+            test_script: test:integration:polaris
+          - job_name: Apache Spark 4.1.3, Polaris 1.7
+            spark_version: '4.1.3'
+            test_script: test:integration:polaris
+          - job_name: Apache Spark 4.1.2, Polaris 1.7
+            spark_version: '4.1.2'
+            test_script: test:integration:polaris
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Spark integration tests
+        env:
+          SPARK_VERSION: ${{ matrix.spark_version }}
+          TEST_SCRIPT: ${{ matrix.test_script }}
+        run: npm run "$TEST_SCRIPT" -- --spark-version "$SPARK_VERSION"
+
+  core-checks:
+    name: Core checks
+    needs:
+      - core-tests
+      - integration-tests
+      - spark-integration
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all test jobs to pass
+        env:
+          CORE_TESTS_RESULT: ${{ needs.core-tests.result }}
+          INTEGRATION_TESTS_RESULT: ${{ needs.integration-tests.result }}
+          SPARK_INTEGRATION_RESULT: ${{ needs.spark-integration.result }}
+        run: |
+          set -euo pipefail
+
+          failed=0
+          check_result() {
+            local name="$1"
+            local result="$2"
+            if [[ "$result" != "success" ]]; then
+              echo "::error::$name did not pass (result: $result)."
+              failed=1
+            fi
+          }
+
+          check_result "Core tests" "$CORE_TESTS_RESULT"
+          check_result "Integration tests" "$INTEGRATION_TESTS_RESULT"
+          check_result "Spark integration tests" "$SPARK_INTEGRATION_RESULT"
+          exit "$failed"
+
   sonar-metrics:
     name: Sonar metrics
-    needs: core-checks
+    needs: core-tests
     continue-on-error: true
-    outputs:
-      coverage: ${{ steps.read-sonar-metrics.outputs.coverage }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -243,10 +348,11 @@ jobs:
             --header "Authorization: Bearer $SONAR_TOKEN" \
             --get \
             --data-urlencode component=SparkControlPlane \
-            --data-urlencode metricKeys=violations,coverage,software_quality_security_issues,software_quality_reliability_issues,software_quality_maintainability_issues,software_quality_blocker_issues,software_quality_high_issues,software_quality_medium_issues,software_quality_low_issues,software_quality_info_issues \
+            --data-urlencode metricKeys=violations,coverage,ncloc,software_quality_security_issues,software_quality_reliability_issues,software_quality_maintainability_issues,software_quality_blocker_issues,software_quality_high_issues,software_quality_medium_issues,software_quality_low_issues,software_quality_info_issues \
             "$SONAR_HOST_URL/api/measures/component")"
           issue_count="$(jq -er '.component.measures[] | select(.metric == "violations") | .value' <<<"$measures")"
           coverage="$(jq -er '.component.measures[] | select(.metric == "coverage") | .value' <<<"$measures")"
+          lines_of_code="$(jq -er '.component.measures[] | select(.metric == "ncloc") | .value' <<<"$measures")"
 
           measure_value() {
             jq -r --arg metric "$1" \
@@ -299,7 +405,15 @@ jobs:
             echo "SonarQube returned an invalid coverage value." >&2
             exit 1
           fi
-          echo "coverage=$coverage" >> "$GITHUB_OUTPUT"
+          if [[ ! "$lines_of_code" =~ ^[0-9]+$ ]]; then
+            echo "SonarQube returned an invalid lines-of-code value." >&2
+            exit 1
+          fi
+          mkdir -p coverage-badge
+          printf '{"schemaVersion":1,"label":"coverage","message":"%s%%","color":"yellowgreen"}\n' \
+            "$coverage" > coverage-badge/coverage.json
+          printf '{"schemaVersion":1,"label":"Lines of code","message":"%s","color":"blue"}\n' \
+            "$lines_of_code" > coverage-badge/lines-of-code.json
 
           {
             echo "## SonarQube metrics"
@@ -331,11 +445,20 @@ jobs:
             echo "Total issues across source files: **$issue_count**"
             echo
             echo "| Code coverage | ${coverage}% |"
+            echo "| Lines of code | $lines_of_code |"
             echo
             echo "Software Quality counts can overlap when a rule affects more than one quality."
             echo
             echo "This run uses a temporary SonarQube instance; findings are not retained after the job ends."
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Sonar metric badge data
+        uses: actions/upload-artifact@v7
+        with:
+          name: sonar-metric-badges
+          path: coverage-badge/*.json
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Report Sonar metrics unavailable
         if: ${{ failure() }}
@@ -345,52 +468,3 @@ jobs:
             echo
             echo "Metrics could not be produced in the temporary SonarQube instance. This job is non-blocking."
           } >> "$GITHUB_STEP_SUMMARY"
-
-  publish-coverage:
-    name: Publish coverage badge data
-    needs: sonar-metrics
-    if: >-
-      ${{ needs.sonar-metrics.outputs.coverage != '' &&
-          (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-          github.ref == 'refs/heads/main' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    concurrency:
-      group: coverage-badge
-      cancel-in-progress: false
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          persist-credentials: true
-
-      - name: Update coverage badge branch
-        env:
-          COVERAGE: ${{ needs.sonar-metrics.outputs.coverage }}
-        run: |
-          set -euo pipefail
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          coverage_ref="$(git ls-remote --heads origin refs/heads/coverage)"
-          if [[ -n "$coverage_ref" ]]; then
-            git fetch --no-tags origin refs/heads/coverage
-            git switch --force-create coverage FETCH_HEAD
-          else
-            git switch --orphan coverage
-            git rm -rf --ignore-unmatch .
-          fi
-
-          printf '{"schemaVersion":1,"label":"coverage","message":"%s%%","color":"yellowgreen"}\n' \
-            "$COVERAGE" > coverage.json
-          git add coverage.json
-          if git diff --cached --quiet; then
-            echo "Coverage badge data is already up to date."
-            exit 0
-          fi
-
-          git commit -m "Update coverage badge"
-          git push origin coverage

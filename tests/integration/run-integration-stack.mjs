@@ -15,8 +15,14 @@ const repositoryRoot = process.cwd();
 const composeFile = path.join(repositoryRoot, 'compose.integration.yaml');
 const temporaryParent = path.join(repositoryRoot, 'tmp');
 const supportedSuites = new Set(['all', 'container', 'polaris', 'postgres', 'spark', 'upgrade']);
+const supportedSparkImageDigests = new Map([
+    ['4.1.2', 'ac7efd6404ef99d6a28ea54ea74fc8ac69c420a7af83a4718b59fecad856e447'],
+    ['4.1.3', '7cdb42ed55b5e02c279e838e38da3336dae74dca6aef07defae93f3c197d8ed6'],
+    ['4.2.0', '786b96ed0058a0f1411475b218105f556ae4dabb2849c8dd23f4a701e94dd2ca'],
+]);
 
-const suite = parseSuite(process.argv.slice(2));
+const { suite, sparkVersion } = parseOptions(process.argv.slice(2));
+const usesPolaris = suite !== 'postgres' && suite !== 'spark';
 const docker = resolveDockerCli();
 const runId = `${process.pid}-${Date.now()}`;
 const projectName = `spark-control-plane-integration-${runId}`.toLowerCase();
@@ -24,6 +30,8 @@ const networkName = `${projectName}-network`;
 const controlPlaneImage = `spark-control-plane:integration-${runId}`;
 const sparkImage = `spark-control-plane:spark-integration-${runId}`;
 const credentials = createCredentials();
+const integrationCatalogName = suite === 'spark' ? 'spark_catalog' : credentials.catalog;
+const integrationNamespace = suite === 'spark' ? 'default' : credentials.namespace;
 const ports = await allocatePorts();
 const fixture = await createIntegrationFixture(runId);
 const composeEnvironment = createComposeEnvironment();
@@ -45,11 +53,13 @@ try {
     await waitForHealthy('postgres', 120_000);
 
     if (suite !== 'postgres') {
-        phase = 'bootstrapping Polaris';
-        await composeUp(['polaris']);
-        await waitForExited('polaris-bootstrap', 180_000);
-        await waitForHealthy('polaris', 180_000);
-        await seedPolaris();
+        if (usesPolaris) {
+            phase = 'bootstrapping Polaris';
+            await composeUp(['polaris']);
+            await waitForExited('polaris-bootstrap', 180_000);
+            await waitForHealthy('polaris', 180_000);
+            await seedPolaris();
+        }
 
         phase = 'starting Spark Connect';
         await composeUp(['spark-connect'], { build: true });
@@ -71,7 +81,9 @@ try {
         await composeBuild();
     }
 
-    phase = `running ${suite} integration suite`;
+    phase = suite === 'spark'
+        ? `running Spark ${sparkVersion} integration suite`
+        : `running ${suite} integration suite`;
     await runSuite();
 } catch (error) {
     exitCode = 1;
@@ -164,6 +176,7 @@ function createComposeEnvironment() {
         INTEGRATION_CONTROL_PLANE_IMAGE: controlPlaneImage,
         INTEGRATION_NETWORK_NAME: networkName,
         INTEGRATION_PIPELINES_PATH: fixture.root,
+        INTEGRATION_SPARK_BASE_IMAGE: `apache/spark:${sparkVersion}-python3@sha256:${supportedSparkImageDigests.get(sparkVersion)}`,
         INTEGRATION_SPARK_IMAGE: sparkImage,
         POLARIS_CATALOG_NAME: credentials.catalog,
         POLARIS_CLIENT_ID: credentials.clientId,
@@ -200,12 +213,12 @@ function createTestEnvironment() {
 
 function createManagedTestContext() {
     return {
-        catalogName: credentials.catalog,
+        catalogName: integrationCatalogName,
         controlPlaneBaseUrl: `http://127.0.0.1:${ports.controlPlane}`,
         demoPipelineName: fixture.demoPipelineName,
         expectedDemoNodeName: 'spark_catalog.default.demo_orders',
-        expectedNodeName: `${credentials.catalog}.${credentials.namespace}.pipeline_output`,
-        namespace: credentials.namespace,
+        expectedNodeName: `${integrationCatalogName}.${integrationNamespace}.pipeline_output`,
+        namespace: integrationNamespace,
         pipelineName: fixture.pipelineName,
         suite,
         tableName: credentials.table,
@@ -229,9 +242,10 @@ async function seedSparkTable() {
     runCompose([
         'exec',
         '--no-TTY',
-        '--env', `POLARIS_CATALOG_NAME=${credentials.catalog}`,
-        '--env', `POLARIS_NAMESPACE=${credentials.namespace}`,
-        '--env', `POLARIS_TABLE_NAME=${credentials.table}`,
+        '--env', `INTEGRATION_CATALOG_NAME=${integrationCatalogName}`,
+        '--env', `INTEGRATION_NAMESPACE=${integrationNamespace}`,
+        '--env', `INTEGRATION_TABLE_PROVIDER=${suite === 'spark' ? 'parquet' : 'iceberg'}`,
+        '--env', `INTEGRATION_TABLE_NAME=${credentials.table}`,
         '--env', 'SPARK_CONNECT_URL=sc://spark-connect:15002',
         'spark-connect',
         'python3',
@@ -464,8 +478,8 @@ async function createIntegrationFixture(identifier) {
         [
             `name: ${pipelineName}`,
             'storage: file:///tmp/spark-control-plane-integration-checkpoints',
-            'catalog: integration_catalog',
-            'database: integration',
+            `catalog: ${integrationCatalogName}`,
+            `database: ${integrationNamespace}`,
             'libraries:',
             '  - glob:',
             '      include: ../sql/**',
@@ -591,13 +605,24 @@ function runtimeEnvironment() {
     );
 }
 
-function parseSuite(args) {
-    const index = args.indexOf('--suite');
-    const value = index === -1 ? 'all' : args[index + 1]?.trim();
-    if (value == null || !supportedSuites.has(value)) {
+function parseOptions(args) {
+    const suiteIndex = args.indexOf('--suite');
+    const suite = suiteIndex === -1 ? 'all' : args[suiteIndex + 1]?.trim();
+    if (suite == null || !supportedSuites.has(suite)) {
         throw new Error(`--suite must be one of: ${[...supportedSuites].join(', ')}.`);
     }
-    return value;
+
+    const sparkVersionIndex = args.indexOf('--spark-version');
+    const sparkVersion = sparkVersionIndex === -1
+        ? '4.1.2'
+        : args[sparkVersionIndex + 1]?.trim();
+    if (sparkVersion == null || !supportedSparkImageDigests.has(sparkVersion)) {
+        throw new Error(`--spark-version must be one of: ${[...supportedSparkImageDigests.keys()].join(', ')}.`);
+    }
+    if (sparkVersionIndex !== -1 && !['all', 'polaris', 'spark'].includes(suite)) {
+        throw new Error('--spark-version can only be used with all, polaris, or spark suites.');
+    }
+    return { sparkVersion, suite };
 }
 
 function redact(value) {
