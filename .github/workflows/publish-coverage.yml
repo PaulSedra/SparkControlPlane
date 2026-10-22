@@ -1,4 +1,4 @@
-name: Publish Sonar metrics
+name: Publish Sonar scan results
 
 on:
   workflow_run:
@@ -14,8 +14,8 @@ permissions:
   contents: write
 
 jobs:
-  publish-metrics:
-    name: Publish Sonar metric data
+  publish-sonar-scan-results:
+    name: Publish Sonar scan results
     if: >-
       ${{ github.event.workflow_run.head_branch == 'main' &&
           github.event.workflow_run.event != 'pull_request' &&
@@ -25,8 +25,8 @@ jobs:
       group: coverage-badge
       cancel-in-progress: false
     steps:
-      - name: Check for Sonar metric artifact
-        id: sonar-artifact
+      - name: Check for Sonar scan results artifact
+        id: sonar-scan-results-artifact
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           UPSTREAM_RUN_ID: ${{ github.event.workflow_run.id }}
@@ -39,7 +39,7 @@ jobs:
             --header "Authorization: Bearer $GH_TOKEN" \
             --header "X-GitHub-Api-Version: 2022-11-28" \
             "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$UPSTREAM_RUN_ID/artifacts")"
-          if jq -e '.artifacts[]? | select(.name == "sonar-metric-badges" and .expired == false)' \
+          if jq -e '.artifacts[]? | select(.name == "sonar-scan-results-badges" and .expired == false)' \
             <<<"$artifacts" >/dev/null; then
             echo "found=true" >> "$GITHUB_OUTPUT"
           fi
@@ -51,33 +51,33 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Download Sonar metric artifact
-        if: ${{ steps.sonar-artifact.outputs.found == 'true' }}
+      - name: Download Sonar scan results artifact
+        if: ${{ steps.sonar-scan-results-artifact.outputs.found == 'true' }}
         uses: actions/download-artifact@v7
         with:
-          name: sonar-metric-badges
-          path: ${{ runner.temp }}/sonar-metric-badges
+          name: sonar-scan-results-badges
+          path: ${{ runner.temp }}/sonar-scan-results-badges
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
           run-id: ${{ github.event.workflow_run.id }}
 
-      - name: Publish metric JSON files
+      - name: Publish Sonar scan result JSON files
         if: ${{ always() }}
         env:
-          SONAR_ARTIFACT_FOUND: ${{ steps.sonar-artifact.outputs.found }}
+          SONAR_SCAN_RESULTS_ARTIFACT_FOUND: ${{ steps.sonar-scan-results-artifact.outputs.found }}
           SOURCE_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
           SOURCE_RUN_NUMBER: ${{ github.event.workflow_run.run_number }}
         run: |
           set -euo pipefail
 
-          if [[ "$SONAR_ARTIFACT_FOUND" != "true" ]]; then
-            echo "Sonar metrics were unavailable; keeping the previously published values." >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$SONAR_SCAN_RESULTS_ARTIFACT_FOUND" != "true" ]]; then
+            echo "Sonar scan results were unavailable; keeping the previously published values." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
-          metrics_dir="$RUNNER_TEMP/sonar-metric-badges"
-          coverage_file="$metrics_dir/coverage.json"
-          loc_file="$metrics_dir/lines-of-code.json"
+          scan_results_dir="$RUNNER_TEMP/sonar-scan-results-badges"
+          coverage_file="$scan_results_dir/coverage.json"
+          loc_file="$scan_results_dir/lines-of-code.json"
           jq -e '
             .schemaVersion == 1 and .label == "coverage" and
             (.message | test("^[0-9]+(\\.[0-9]+)?%$")) and .color == "yellowgreen"
@@ -118,7 +118,7 @@ jobs:
             return 1
           }
 
-          publish_metric() {
+          publish_scan_result() {
             local source_file="$1"
             local destination_file="$2"
             if is_current_or_newer "$destination_file"; then
@@ -128,17 +128,17 @@ jobs:
                 '. + {sourceRunNumber: $runNumber, sourceRunAttempt: $runAttempt}' \
                 "$source_file" > "$destination_file"
             else
-              echo "Ignoring older metric data from a previous Build run." >> "$GITHUB_STEP_SUMMARY"
+              echo "Ignoring older Sonar scan results from a previous Build run." >> "$GITHUB_STEP_SUMMARY"
             fi
           }
 
-          publish_metric "$coverage_file" coverage.json
-          publish_metric "$loc_file" lines-of-code.json
+          publish_scan_result "$coverage_file" coverage.json
+          publish_scan_result "$loc_file" lines-of-code.json
           git add -A -- '*.json'
           if git diff --cached --quiet; then
-            echo "Sonar metric badge data is already up to date."
+            echo "Sonar scan result badge data is already up to date."
             exit 0
           fi
 
-          git commit -m "Update generated Sonar metric badges"
+          git commit -m "Update generated Sonar scan result badges"
           git push origin coverage

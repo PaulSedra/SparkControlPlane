@@ -15,8 +15,8 @@ permissions:
   contents: read
 
 jobs:
-  core-tests:
-    name: Core tests
+  core-test-suite:
+    name: Core Test Suite
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -148,7 +148,7 @@ jobs:
   core-checks:
     name: Core checks
     needs:
-      - core-tests
+      - core-test-suite
       - integration-tests
       - spark-integration
     if: ${{ always() }}
@@ -156,7 +156,7 @@ jobs:
     steps:
       - name: Require all test jobs to pass
         env:
-          CORE_TESTS_RESULT: ${{ needs.core-tests.result }}
+          CORE_TEST_SUITE_RESULT: ${{ needs.core-test-suite.result }}
           INTEGRATION_TESTS_RESULT: ${{ needs.integration-tests.result }}
           SPARK_INTEGRATION_RESULT: ${{ needs.spark-integration.result }}
           WORKFLOW_EVENT_NAME: ${{ github.event_name }}
@@ -173,7 +173,7 @@ jobs:
             fi
           }
 
-          check_result "Core tests" "$CORE_TESTS_RESULT"
+          check_result "Core Test Suite" "$CORE_TEST_SUITE_RESULT"
           check_result "Integration tests" "$INTEGRATION_TESTS_RESULT"
           if [[ "$WORKFLOW_EVENT_NAME" == "pull_request" ]]; then
             check_result "Spark integration tests" "$SPARK_INTEGRATION_RESULT"
@@ -182,9 +182,9 @@ jobs:
           fi
           exit "$failed"
 
-  sonar-metrics:
-    name: Sonar metrics
-    needs: core-tests
+  sonar-scan-results:
+    name: SonarQube Scan
+    needs: core-test-suite
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -331,7 +331,7 @@ jobs:
               -Dsonar.javascript.lcov.reportPaths=coverage/sonar/server-unit.lcov,coverage/sonar/web-unit.lcov,coverage/sonar/contract.lcov,coverage/sonar/integration-base.lcov
 
       - name: Read Sonar issue details and coverage
-        id: read-sonar-metrics
+        id: read-sonar-scan-results
         env:
           SONAR_HOST_URL: http://127.0.0.1:9000
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -507,14 +507,12 @@ jobs:
                     elif $issue.cleanCodeAttributeCategory == "RESPONSIBLE" then "Responsibility"
                     else "—" end
                   ),
-                  details: (
-                    (.message // "No message provided")
-                    + " — "
-                    + ((.component // "unknown") | sub("^SparkControlPlane:"; ""))
+                  details: (.message // "No message provided"),
+                  reference: (
+                    ((.component // "unknown") | sub("^SparkControlPlane:"; ""))
                     + ":"
                     + ((.textRange.startLine // .line // "file-level") | tostring)
                   ),
-                  reference: (.key // "unknown"),
                   rule: (.rule // "unknown"),
                   matched_categories: $matched_categories,
                   in_pr_diff: $in_pr_diff
@@ -646,7 +644,7 @@ jobs:
                 echo "| --- | --- | --- | --- | --- | --- |"
                 write_issue_table all-pr
               else
-                echo "Hooray! This PR does not introduce any Sonar issues."
+                echo "Hooray! Sonar did not detect any issues in this PR."
               fi
               echo
               echo "## Blocking Issues ($blocking_issue_count)"
@@ -656,7 +654,7 @@ jobs:
                 echo "| --- | --- | --- | --- | --- | --- |"
                 write_issue_table blocking-pr
               else
-                echo "This PR does not introduce any blocking Sonar issues."
+                echo "Sonar did not detect any blocking issues in this PR."
               fi
             else
               echo "## Blocking Issues"
@@ -676,35 +674,35 @@ jobs:
             echo "coverage=$coverage"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Upload Sonar metric badge data
+      - name: Upload Sonar scan result badge data
         uses: actions/upload-artifact@v7
         with:
-          name: sonar-metric-badges
+          name: sonar-scan-results-badges
           path: coverage-badge/*.json
           if-no-files-found: error
           retention-days: 1
 
       - name: Enforce Sonar quality gate
-        if: ${{ steps.read-sonar-metrics.outputs.blocking_issue_count != '0' || steps.read-sonar-metrics.outputs.coverage_below_60 == 'true' }}
+        if: ${{ steps.read-sonar-scan-results.outputs.blocking_issue_count != '0' || steps.read-sonar-scan-results.outputs.coverage_below_60 == 'true' }}
         env:
-          BLOCKING_ISSUE_COUNT: ${{ steps.read-sonar-metrics.outputs.blocking_issue_count }}
-          COVERAGE_BELOW_60: ${{ steps.read-sonar-metrics.outputs.coverage_below_60 }}
-          COVERAGE: ${{ steps.read-sonar-metrics.outputs.coverage }}
+          BLOCKING_ISSUE_COUNT: ${{ steps.read-sonar-scan-results.outputs.blocking_issue_count }}
+          COVERAGE_BELOW_60: ${{ steps.read-sonar-scan-results.outputs.coverage_below_60 }}
+          COVERAGE: ${{ steps.read-sonar-scan-results.outputs.coverage }}
         run: |
           set -euo pipefail
           if (( BLOCKING_ISSUE_COUNT > 0 )); then
-            echo "::error::Found $BLOCKING_ISSUE_COUNT selected Sonar issue(s) on lines added by the PR."
+            echo "::error::Sonar found $BLOCKING_ISSUE_COUNT blocking issue(s) in this PR."
           fi
           if [[ "$COVERAGE_BELOW_60" == "true" ]]; then
             echo "::error::Code coverage is ${COVERAGE}%, below the 60% minimum."
           fi
           exit 1
 
-      - name: Report Sonar metrics unavailable
-        if: ${{ failure() && steps.read-sonar-metrics.outcome != 'success' }}
+      - name: Report Sonar scan results unavailable
+        if: ${{ failure() && steps.read-sonar-scan-results.outcome != 'success' }}
         run: |
           {
-            echo "## SonarQube metrics"
+            echo "## Sonar scan results"
             echo
-            echo "Metrics could not be produced in the temporary SonarQube instance."
+            echo "Sonar scan results could not be produced in the temporary SonarQube instance."
           } >> "$GITHUB_STEP_SUMMARY"
