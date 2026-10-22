@@ -185,7 +185,6 @@ jobs:
   sonar-metrics:
     name: Sonar metrics
     needs: core-tests
-    continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -335,6 +334,9 @@ jobs:
         id: read-sonar-metrics
         env:
           SONAR_HOST_URL: http://127.0.0.1:9000
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_DIFF_CHECK_ENABLED: ${{ github.event_name == 'pull_request' }}
         run: |
           set -euo pipefail
 
@@ -395,7 +397,40 @@ jobs:
 
           attribute_categories="$(mktemp)"
           issue_details="$(mktemp)"
-          trap 'rm -f "$attribute_categories" "$issue_details"' EXIT
+          changed_line_locations="$(mktemp)"
+          pr_changed_locations="$(mktemp)"
+          trap 'rm -f "$attribute_categories" "$issue_details" "$changed_line_locations" "$pr_changed_locations"' EXIT
+          if [[ "$PR_DIFF_CHECK_ENABLED" == "true" ]]; then
+            if [[ -z "$PR_BASE_SHA" || -z "$PR_HEAD_SHA" ]]; then
+              echo "Pull request base or head SHA is missing." >&2
+              exit 1
+            fi
+
+            git diff --no-ext-diff --no-renames --unified=0 \
+              "$PR_BASE_SHA...$PR_HEAD_SHA" -- |
+              awk '
+                /^\+\+\+ b\// {
+                  path = substr($0, 7)
+                  next
+                }
+                /^@@ / {
+                  if (match($0, /\+[0-9]+(,[0-9]+)?/)) {
+                    added_range = substr($0, RSTART + 1, RLENGTH - 1)
+                    split(added_range, range_parts, ",")
+                    first_line = range_parts[1] + 0
+                    line_count = (range_parts[2] == "" ? 1 : range_parts[2] + 0)
+                    for (offset = 0; offset < line_count; offset++) {
+                      print path "\t" first_line + offset
+                    }
+                  }
+                }
+              ' > "$changed_line_locations"
+
+            jq -Rn '[inputs | select(length > 0) | split("\t") | {path: .[0], line: (.[1] | tonumber)}]' \
+              "$changed_line_locations" > "$pr_changed_locations"
+          else
+            printf '[]\n' > "$pr_changed_locations"
+          fi
           page_size=500
           page=1
           issue_total=""
@@ -412,7 +447,9 @@ jobs:
             fi
             jq '.issues[]? | .cleanCodeAttributeCategory // "UNCLASSIFIED"' \
               <<<"$issues" >> "$attribute_categories"
-            jq -c '
+            jq -c \
+              --argjson is_pull_request "$PR_DIFF_CHECK_ENABLED" \
+              --slurpfile changed_lines "$pr_changed_locations" '
               .issues[]?
               | . as $issue
               | [
@@ -423,14 +460,64 @@ jobs:
                   (if $issue.cleanCodeAttributeCategory == "ADAPTABLE" then "Adaptability" else empty end),
                   (if $issue.cleanCodeAttributeCategory == "RESPONSIBLE" then "Responsibility" else empty end)
                 ] as $matched_categories
-              | select($matched_categories | length > 0)
+              | (
+                  if $is_pull_request
+                    and ($issue.textRange.startLine != null or $issue.line != null) then
+                    ($issue.component // "unknown" | sub("^SparkControlPlane:"; "")) as $path
+                    | ($issue.textRange.startLine // $issue.line | tonumber) as $start_line
+                    | ($issue.textRange.endLine // $start_line | tonumber) as $end_line
+                    | any(
+                        $changed_lines[0][]?;
+                        .path == $path and .line >= $start_line and .line <= $end_line
+                      )
+                  else
+                    false
+                  end
+                ) as $in_pr_diff
               | {
                   key: (.key // "unknown"),
-                  message: (.message // "No message provided"),
+                  severity: (
+                    [$issue.impacts[]? | .severity? | select(. != null)
+                      | if . == "HIGH" then "High"
+                        elif . == "MEDIUM" then "Medium"
+                        elif . == "LOW" then "Low"
+                        else . end
+                    ] as $severities
+                    | if ($severities | length) > 0 then
+                        ($severities | unique | join(", "))
+                      elif $issue.severity != null then
+                        $issue.severity
+                      else
+                        "—"
+                      end
+                  ),
+                  software_quality: (
+                    [$issue.impacts[]? | .softwareQuality? | select(. != null)
+                      | if . == "SECURITY" then "Security"
+                        elif . == "RELIABILITY" then "Reliability"
+                        elif . == "MAINTAINABILITY" then "Maintainability"
+                        else . end
+                    ]
+                    | if length == 0 then "—" else unique | join(", ") end
+                  ),
+                  code_attribute: (
+                    if $issue.cleanCodeAttributeCategory == "CONSISTENT" then "Consistency"
+                    elif $issue.cleanCodeAttributeCategory == "INTENTIONAL" then "Intentionality"
+                    elif $issue.cleanCodeAttributeCategory == "ADAPTABLE" then "Adaptability"
+                    elif $issue.cleanCodeAttributeCategory == "RESPONSIBLE" then "Responsibility"
+                    else "—" end
+                  ),
+                  details: (
+                    (.message // "No message provided")
+                    + " — "
+                    + ((.component // "unknown") | sub("^SparkControlPlane:"; ""))
+                    + ":"
+                    + ((.textRange.startLine // .line // "file-level") | tostring)
+                  ),
+                  reference: (.key // "unknown"),
                   rule: (.rule // "unknown"),
-                  component: (.component // "unknown"),
-                  line: (.textRange.startLine // .line // "file-level"),
-                  matched_categories: $matched_categories
+                  matched_categories: $matched_categories,
+                  in_pr_diff: $in_pr_diff
                 }
             ' <<<"$issues" >> "$issue_details"
             if (( page * page_size >= issue_total )); then
@@ -470,9 +557,51 @@ jobs:
             "$coverage" > coverage-badge/coverage.json
           printf '{"schemaVersion":1,"label":"Lines of code","message":"%s","color":"blue"}\n' \
             "$lines_of_code" > coverage-badge/lines-of-code.json
+          selected_issue_count="$(jq -s '[.[] | select(.matched_categories | length > 0)] | length' "$issue_details")"
+          if [[ "$PR_DIFF_CHECK_ENABLED" == "true" ]]; then
+            pr_issue_count="$(jq -s '[.[] | select(.in_pr_diff)] | length' "$issue_details")"
+            blocking_issue_count="$(jq -s '[.[] | select(.in_pr_diff and (.matched_categories | length > 0))] | length' "$issue_details")"
+          else
+            pr_issue_count=0
+            blocking_issue_count=0
+          fi
+          coverage_below_60="$(awk -v coverage="$coverage" 'BEGIN { print (coverage < 60) ? "true" : "false" }')"
+
+          write_issue_table() {
+            local table_filter="$1"
+            jq -r --arg table_filter "$table_filter" '
+              def markdown_cell:
+                tostring
+                | gsub("[\\r\\n\\t]+"; " ")
+                | gsub("&"; "&amp;")
+                | gsub("<"; "&lt;")
+                | gsub(">"; "&gt;")
+                | gsub("\\\\"; "&#92;")
+                | gsub("\\|"; "&#124;")
+                | gsub("\\["; "&#91;")
+                | gsub("\\]"; "&#93;")
+                | gsub("`"; "&#96;")
+                | gsub("\\*"; "&#42;")
+                | gsub("_"; "&#95;")
+                | gsub("~"; "&#126;");
+              . as $issue
+              | select(
+                  if $table_filter == "all-pr" then
+                    $issue.in_pr_diff
+                  elif $table_filter == "blocking-pr" then
+                    $issue.in_pr_diff and ($issue.matched_categories | length > 0)
+                  else
+                    ($issue.matched_categories | length > 0)
+                  end
+                )
+              | "| \($issue.severity | markdown_cell) | \($issue.software_quality | markdown_cell) | \($issue.code_attribute | markdown_cell) | \($issue.details | markdown_cell) | \($issue.reference | markdown_cell) | \($issue.rule | markdown_cell) |"
+            ' "$issue_details"
+          }
 
           {
             echo "## SonarQube metrics"
+            echo
+            echo "Metric counts cover the full analyzed snapshot. PR issue tables list issues on added lines; only selected categories block the PR."
             echo
             echo "| Software Quality | Issues |"
             echo "| --- | ---: |"
@@ -498,33 +627,36 @@ jobs:
               echo "| Unclassified | $unclassified_issues |"
             fi
             echo
-            echo "## Selected issue details"
-            echo
-            if [[ -s "$issue_details" ]]; then
-              echo "Each issue is listed once. The categories column shows why it was selected."
+            if [[ "$PR_DIFF_CHECK_ENABLED" == "true" ]]; then
+              echo "## Issues Created In This PR ($pr_issue_count)"
               echo
-              echo "| Matched by | Issue details | File and line | Rule |"
-              echo "| --- | --- | --- | --- |"
-              jq -r '
-                def markdown_cell:
-                  tostring
-                  | gsub("[\\r\\n\\t]+"; " ")
-                  | gsub("&"; "&amp;")
-                  | gsub("<"; "&lt;")
-                  | gsub(">"; "&gt;")
-                  | gsub("\\\\"; "&#92;")
-                  | gsub("\\|"; "&#124;")
-                  | gsub("\\["; "&#91;")
-                  | gsub("\\]"; "&#93;")
-                  | gsub("`"; "&#96;")
-                  | gsub("\\*"; "&#42;")
-                  | gsub("_"; "&#95;")
-                  | gsub("~"; "&#126;");
-                . as $issue
-                | "| \($issue.matched_categories | join(", ") | markdown_cell) | \(($issue.key + ": " + $issue.message) | markdown_cell) | \((($issue.component | sub("^SparkControlPlane:"; "")) + ":" + ($issue.line | tostring)) | markdown_cell) | \($issue.rule | markdown_cell) |"
-              ' "$issue_details" >> "$GITHUB_STEP_SUMMARY"
+              if (( pr_issue_count > 0 )); then
+                echo "| Severity | Software Quality | Code Attribute | Issue Details | Reference | Rule |"
+                echo "| --- | --- | --- | --- | --- | --- |"
+                write_issue_table all-pr
+              else
+                echo "Hooray! This PR does not introduce any Sonar issues."
+              fi
+              echo
+              echo "## Blocking Issues ($blocking_issue_count)"
+              echo
+              if (( blocking_issue_count > 0 )); then
+                echo "| Severity | Software Quality | Code Attribute | Issue Details | Reference | Rule |"
+                echo "| --- | --- | --- | --- | --- | --- |"
+                write_issue_table blocking-pr
+              else
+                echo "This PR does not introduce any blocking Sonar issues."
+              fi
             else
-              echo "No issues matched the selected categories."
+              echo "## Blocking Issues"
+              echo
+              if (( selected_issue_count > 0 )); then
+                echo "| Severity | Software Quality | Code Attribute | Issue Details | Reference | Rule |"
+                echo "| --- | --- | --- | --- | --- | --- |"
+                write_issue_table selected
+              else
+                echo "Sonar did not detect any blocking issues."
+              fi
             fi
             echo
             echo "Total issues across source files: **$issue_count**"
@@ -535,8 +667,19 @@ jobs:
             echo
             echo "Software Quality counts can overlap when a rule affects more than one quality."
             echo
+            if [[ "$PR_DIFF_CHECK_ENABLED" == "true" ]]; then
+              echo "The Sonar check fails for selected issues on lines added by this PR or coverage below 60%."
+            else
+              echo "The Sonar issue gate applies to PR changes. Coverage below 60% fails on every run."
+            fi
+            echo
             echo "This run uses a temporary SonarQube instance; findings are not retained after the job ends."
           } >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "blocking_issue_count=$blocking_issue_count"
+            echo "coverage_below_60=$coverage_below_60"
+            echo "coverage=$coverage"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Upload Sonar metric badge data
         uses: actions/upload-artifact@v7
@@ -546,11 +689,27 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      - name: Enforce Sonar quality gate
+        if: ${{ steps.read-sonar-metrics.outputs.blocking_issue_count != '0' || steps.read-sonar-metrics.outputs.coverage_below_60 == 'true' }}
+        env:
+          BLOCKING_ISSUE_COUNT: ${{ steps.read-sonar-metrics.outputs.blocking_issue_count }}
+          COVERAGE_BELOW_60: ${{ steps.read-sonar-metrics.outputs.coverage_below_60 }}
+          COVERAGE: ${{ steps.read-sonar-metrics.outputs.coverage }}
+        run: |
+          set -euo pipefail
+          if (( BLOCKING_ISSUE_COUNT > 0 )); then
+            echo "::error::Found $BLOCKING_ISSUE_COUNT selected Sonar issue(s) on lines added by the PR."
+          fi
+          if [[ "$COVERAGE_BELOW_60" == "true" ]]; then
+            echo "::error::Code coverage is ${COVERAGE}%, below the 60% minimum."
+          fi
+          exit 1
+
       - name: Report Sonar metrics unavailable
-        if: ${{ failure() }}
+        if: ${{ failure() && steps.read-sonar-metrics.outcome != 'success' }}
         run: |
           {
             echo "## SonarQube metrics"
             echo
-            echo "Metrics could not be produced in the temporary SonarQube instance. This job is non-blocking."
+            echo "Metrics could not be produced in the temporary SonarQube instance."
           } >> "$GITHUB_STEP_SUMMARY"
