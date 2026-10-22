@@ -394,7 +394,8 @@ jobs:
           info_issues="$(measure_value software_quality_info_issues)"
 
           attribute_categories="$(mktemp)"
-          trap 'rm -f "$attribute_categories"' EXIT
+          issue_details="$(mktemp)"
+          trap 'rm -f "$attribute_categories" "$issue_details"' EXIT
           page_size=500
           page=1
           issue_total=""
@@ -411,6 +412,27 @@ jobs:
             fi
             jq '.issues[]? | .cleanCodeAttributeCategory // "UNCLASSIFIED"' \
               <<<"$issues" >> "$attribute_categories"
+            jq -c '
+              .issues[]?
+              | . as $issue
+              | [
+                  (if any($issue.impacts[]?; .softwareQuality == "SECURITY") then "Security" else empty end),
+                  (if any($issue.impacts[]?; .softwareQuality == "RELIABILITY") then "Reliability" else empty end),
+                  (if (any($issue.impacts[]?; .severity == "HIGH") or $issue.severity == "HIGH") then "High" else empty end),
+                  (if $issue.cleanCodeAttributeCategory == "CONSISTENT" then "Consistency" else empty end),
+                  (if $issue.cleanCodeAttributeCategory == "ADAPTABLE" then "Adaptability" else empty end),
+                  (if $issue.cleanCodeAttributeCategory == "RESPONSIBLE" then "Responsibility" else empty end)
+                ] as $matched_categories
+              | select($matched_categories | length > 0)
+              | {
+                  key: (.key // "unknown"),
+                  message: (.message // "No message provided"),
+                  rule: (.rule // "unknown"),
+                  component: (.component // "unknown"),
+                  line: (.textRange.startLine // .line // "file-level"),
+                  matched_categories: $matched_categories
+                }
+            ' <<<"$issues" >> "$issue_details"
             if (( page * page_size >= issue_total )); then
               break
             fi
@@ -433,6 +455,16 @@ jobs:
             echo "SonarQube returned an invalid lines-of-code value." >&2
             exit 1
           fi
+          lines_of_code_formatted="$(awk -v value="$lines_of_code" 'BEGIN {
+            digit_count = length(value)
+            for (i = 1; i <= digit_count; i++) {
+              printf "%s", substr(value, i, 1)
+              if ((digit_count - i) % 3 == 0 && i < digit_count) {
+                printf ","
+              }
+            }
+            printf "\n"
+          }')"
           mkdir -p coverage-badge
           printf '{"schemaVersion":1,"label":"coverage","message":"%s%%","color":"yellowgreen"}\n' \
             "$coverage" > coverage-badge/coverage.json
@@ -466,10 +498,40 @@ jobs:
               echo "| Unclassified | $unclassified_issues |"
             fi
             echo
+            echo "## Selected issue details"
+            echo
+            if [[ -s "$issue_details" ]]; then
+              echo "Each issue is listed once. The categories column shows why it was selected."
+              echo
+              echo "| Matched by | Issue details | File and line | Rule |"
+              echo "| --- | --- | --- | --- |"
+              jq -r '
+                def markdown_cell:
+                  tostring
+                  | gsub("[\\r\\n\\t]+"; " ")
+                  | gsub("&"; "&amp;")
+                  | gsub("<"; "&lt;")
+                  | gsub(">"; "&gt;")
+                  | gsub("\\\\"; "&#92;")
+                  | gsub("\\|"; "&#124;")
+                  | gsub("\\["; "&#91;")
+                  | gsub("\\]"; "&#93;")
+                  | gsub("`"; "&#96;")
+                  | gsub("\\*"; "&#42;")
+                  | gsub("_"; "&#95;")
+                  | gsub("~"; "&#126;");
+                . as $issue
+                | "| \($issue.matched_categories | join(", ") | markdown_cell) | \(($issue.key + ": " + $issue.message) | markdown_cell) | \((($issue.component | sub("^SparkControlPlane:"; "")) + ":" + ($issue.line | tostring)) | markdown_cell) | \($issue.rule | markdown_cell) |"
+              ' "$issue_details" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "No issues matched the selected categories."
+            fi
+            echo
             echo "Total issues across source files: **$issue_count**"
             echo
-            echo "| Code coverage | ${coverage}% |"
-            echo "| Lines of code | $lines_of_code |"
+            echo "Code coverage: ${coverage}%"
+            echo
+            echo "Lines of code: $lines_of_code_formatted"
             echo
             echo "Software Quality counts can overlap when a rule affects more than one quality."
             echo
