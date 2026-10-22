@@ -1,0 +1,19 @@
+name: Build / Apache Spark 4.2.0
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - branch-0.1
+  schedule:
+    - cron: '0 16 * * 5'
+      timezone: America/New_York
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    uses: ./.github/workflows/run-spark-integration.yml
+    with:
+      spark_version: '4.2.0'

@@ -134,7 +134,8 @@ test('container restart records an unknown outcome without resubmitting the loca
         const executionId = active.cliExecutionId;
         assert.ok(executionId);
 
-        dockerCommand(['restart', containerName]);
+        // Kill the CLI supervisor immediately so a fast Spark run cannot finish during a graceful stop.
+        dockerCommand(['restart', '--signal', 'SIGKILL', containerName]);
         await waitForReady();
         const terminal = await waitForRun(runId, ['UNKNOWN']);
         assert.equal(terminal.cliState, 'UNKNOWN');

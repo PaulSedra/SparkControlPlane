@@ -16,3 +16,13 @@ These managed suites verify external boundaries. The dependency-free base
 integration suite does not provide that coverage. Infrastructure fixtures are
 located under `docker/integration/`; reusable suite wiring is located under
 `support/`.
+
+The Spark suite runs against Spark's built-in catalog without starting
+Polaris. The Polaris suite starts Polaris and Spark Connect together. Both
+suites accept `--spark-version`; the runner pins each supported Spark image by
+digest. For example:
+
+```sh
+npm run test:integration:spark -- --spark-version <supported-version>
+npm run test:integration:polaris -- --spark-version <supported-version>
+```

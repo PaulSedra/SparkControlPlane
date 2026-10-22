@@ -1,9 +1,9 @@
 # Spark Control Plane
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/license/apache-2-0)
-[![Version](https://img.shields.io/badge/version-0.1.1-orange)](package.json)
-[![Test coverage 74.82%](https://img.shields.io/badge/coverage-74.82%25-yellowgreen)](tests/README.md)
-[![Source lines](https://img.shields.io/badge/source_lines-29%2C523-informational)](src/)
+[![Release Spark Control Plane](https://img.shields.io/github/v/release/PaulSedra/SparkControlPlane?label=Release%20Spark%20Control%20Plane)](https://github.com/PaulSedra/SparkControlPlane/releases/latest)
+[![Test coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FPaulSedra%2FSparkControlPlane%2Fcoverage%2Fcoverage.json)](tests/README.md)
+[![Lines of code](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FPaulSedra%2FSparkControlPlane%2Fcoverage%2Flines-of-code.json)](src/)
 [![Node.js](https://img.shields.io/badge/Node.js-24.19.0-339933)](package.json)
 
 Spark Control Plane is a web UI for managing Apache Spark Declarative Pipelines
@@ -35,13 +35,32 @@ contains the detailed server architecture and behavior contracts.
 
 ## Build & Compatibility Status
 
-For now, the following table outlines compatibility based on manual testing.
+CI requires the core checks and the current compatibility baseline for merges.
+Additional compatibility workflows run on selected branch updates and on a
+schedule; their results remain visible in the badges.
 
-| Branch | Status                                                                                                                    |
-|--------|---------------------------------------------------------------------------------------------------------------------------|
-| `main` | [![Known working](https://img.shields.io/badge/Apache%20Spark%204.2.0-passing-brightgreen)](#build--compatibility-status) |
-|        | [![Known working](https://img.shields.io/badge/Apache%20Spark%204.1.3-passing-brightgreen)](#build--compatibility-status) |
-|        | [![Known working](https://img.shields.io/badge/Apache%20Polaris-passing-brightgreen)](#build--compatibility-status)       |
+| Branch       | Status                                                                                                                                                                                                                                                                          |
+|--------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `main`       | [![Build / Apache Spark 4.2.0](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.2.0.yml/badge.svg?branch=main)](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.2.0.yml)                                                       |
+|              | [![Build / Apache Spark 4.1.3](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.3.yml/badge.svg?branch=main)](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.3.yml)                                                       |
+|              | [![Build / Apache Spark 4.1.2](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.2.yml/badge.svg?branch=main)](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.2.yml)                                                       |
+|              | [![Build / Apache Spark 4.1.1](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.1.yml/badge.svg?branch=main)](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.1.yml)                                                       |
+|              | [![Build / Apache Spark 4.1.0](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.0.yml/badge.svg?branch=main)](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.0.yml)                                                       |
+|              | [![Build / Apache Spark 4.2.0, Polaris 1.7](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.2.0-polaris-1.7.yml/badge.svg?branch=main)](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.2.0-polaris-1.7.yml)                  |
+|              | [![Build / Apache Spark 4.1.3, Polaris 1.7](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.3-polaris-1.7.yml/badge.svg?branch=main)](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.3-polaris-1.7.yml)                  |
+|              | [![Build / Apache Spark 4.1.2, Polaris 1.7](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.2-polaris-1.7.yml/badge.svg?branch=main)](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.2-polaris-1.7.yml)                  |
+|              | [![Build / Apache Spark 4.1.1, Polaris 1.7](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.1-polaris-1.7.yml/badge.svg?branch=main)](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.1-polaris-1.7.yml)                  |
+|              | [![Build / Apache Spark 4.1.0, Polaris 1.7](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.0-polaris-1.7.yml/badge.svg?branch=main)](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.0-polaris-1.7.yml)                  |
+| `branch-0.1` | [![Build / Apache Spark 4.2.0](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.2.0.yml/badge.svg?branch=branch-0.1)](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.2.0.yml)                                                 |
+|              | [![Build / Apache Spark 4.1.3](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.3.yml/badge.svg?branch=branch-0.1&event=push)](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.3.yml)                                      |
+|              | [![Build / Apache Spark 4.1.2](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.2.yml/badge.svg?branch=branch-0.1)](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.2.yml)                                                 |
+|              | [![Build / Apache Spark 4.1.1](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.1.yml/badge.svg?branch=branch-0.1)](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.1.yml)                                                 |
+|              | [![Build / Apache Spark 4.1.0](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.0.yml/badge.svg?branch=branch-0.1)](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.0.yml)                                                 |
+|              | [![Build / Apache Spark 4.2.0, Polaris 1.7](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.2.0-polaris-1.7.yml/badge.svg?branch=branch-0.1)](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.2.0-polaris-1.7.yml)            |
+|              | [![Build / Apache Spark 4.1.3, Polaris 1.7](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.3-polaris-1.7.yml/badge.svg?branch=branch-0.1&event=push)](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.3-polaris-1.7.yml) |
+|              | [![Build / Apache Spark 4.1.2, Polaris 1.7](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.2-polaris-1.7.yml/badge.svg?branch=branch-0.1)](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.2-polaris-1.7.yml)            |
+|              | [![Build / Apache Spark 4.1.1, Polaris 1.7](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.1-polaris-1.7.yml/badge.svg?branch=branch-0.1)](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.1-polaris-1.7.yml)            |
+|              | [![Build / Apache Spark 4.1.0, Polaris 1.7](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.0-polaris-1.7.yml/badge.svg?branch=branch-0.1)](https://github.com/PaulSedra/SparkControlPlane/actions/workflows/spark-4.1.0-polaris-1.7.yml)            |
 
 ## Feature Roadmap
 

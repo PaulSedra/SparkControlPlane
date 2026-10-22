@@ -56,9 +56,9 @@ flowchart LR
     CLI -->|" official pipeline execution "| Spark
     Catalog -->|" hierarchy and enrichment in Polaris mode "| Polaris
     Catalog -->|" hierarchy, details, and samples in Spark mode "| Spark
-    class Browser, AIStor client
-    class HTTP, UI transport
-    class Worker, CLI execution
+    class Browser,AIStor client
+    class HTTP,UI transport
+    class Worker,CLI execution
     classDef client fill: #263341, stroke: #94a3b8, stroke-width: 2px
     classDef transport fill: #1e3a5f, stroke: #60a5fa, stroke-width: 2px
     classDef execution fill: #1e3a5f, stroke: #60a5fa, stroke-width: 2px

@@ -1,0 +1,708 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+      - branch-0.1
+  pull_request:
+    branches:
+      - main
+      - branch-0.1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  core-test-suite:
+    name: Core Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.10.12'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Python dependencies
+        run: python -m pip install --disable-pip-version-check --no-cache-dir -r requirements.txt
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run core test coverage
+        run: npm run test:coverage:core
+
+      - name: Upload Sonar coverage reports
+        uses: actions/upload-artifact@v7
+        with:
+          name: sonar-coverage
+          path: coverage/sonar/*.lcov
+          if-no-files-found: error
+          retention-days: 1
+
+  integration-tests:
+    name: ${{ matrix.suite_name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite_name: PostgreSQL integration
+            test_script: test:integration:postgres
+            requires_python_dependencies: false
+            requires_ui_build: true
+          - suite_name: Container integration
+            test_script: test:integration:container
+            requires_python_dependencies: true
+            requires_ui_build: false
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          cache: npm
+
+      - name: Set up Python
+        if: ${{ matrix.requires_python_dependencies }}
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.10.12'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Python dependencies
+        if: ${{ matrix.requires_python_dependencies }}
+        run: python -m pip install --disable-pip-version-check --no-cache-dir -r requirements.txt
+
+      - name: Build application for PostgreSQL integration
+        if: ${{ matrix.requires_ui_build }}
+        run: npm run build
+
+      - name: Run integration tests
+        env:
+          TEST_SCRIPT: ${{ matrix.test_script }}
+        run: npm run "$TEST_SCRIPT"
+
+  spark-integration:
+    name: ${{ matrix.job_name }}
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - job_name: Apache Spark 4.1.3
+            spark_version: '4.1.3'
+            test_script: test:integration:spark
+            requires_python_dependencies: true
+          - job_name: Apache Spark 4.1.3, Polaris 1.7
+            spark_version: '4.1.3'
+            test_script: test:integration:polaris
+            requires_python_dependencies: false
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          cache: npm
+
+      - name: Set up Python
+        if: ${{ matrix.requires_python_dependencies }}
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.10.12'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Python dependencies
+        if: ${{ matrix.requires_python_dependencies }}
+        run: python -m pip install --disable-pip-version-check --no-cache-dir -r requirements.txt
+
+      - name: Run Spark integration tests
+        env:
+          SPARK_VERSION: ${{ matrix.spark_version }}
+          TEST_SCRIPT: ${{ matrix.test_script }}
+        run: npm run "$TEST_SCRIPT" -- --spark-version "$SPARK_VERSION"
+
+  core-checks:
+    name: Core checks
+    needs:
+      - core-test-suite
+      - integration-tests
+      - spark-integration
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all test jobs to pass
+        env:
+          CORE_TEST_SUITE_RESULT: ${{ needs.core-test-suite.result }}
+          INTEGRATION_TESTS_RESULT: ${{ needs.integration-tests.result }}
+          SPARK_INTEGRATION_RESULT: ${{ needs.spark-integration.result }}
+          WORKFLOW_EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+
+          failed=0
+          check_result() {
+            local name="$1"
+            local result="$2"
+            if [[ "$result" != "success" ]]; then
+              echo "::error::$name did not pass (result: $result)."
+              failed=1
+            fi
+          }
+
+          check_result "Core Test Suite" "$CORE_TEST_SUITE_RESULT"
+          check_result "Integration tests" "$INTEGRATION_TESTS_RESULT"
+          if [[ "$WORKFLOW_EVENT_NAME" == "pull_request" ]]; then
+            check_result "Spark integration tests" "$SPARK_INTEGRATION_RESULT"
+          else
+            echo "Spark compatibility tests are skipped for $WORKFLOW_EVENT_NAME events."
+          fi
+          exit "$failed"
+
+  sonar-scan-results:
+    name: SonarQube Scan
+    needs: core-test-suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      sonarqube:
+        image: sonarqube:26.10.0.133078-community
+        ports:
+          - 9000:9000
+        env:
+          SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          cache: npm
+
+      - name: Install dependencies without running package scripts
+        run: npm ci --ignore-scripts
+
+      - name: Download Sonar coverage reports
+        uses: actions/download-artifact@v7
+        with:
+          name: sonar-coverage
+          path: coverage/sonar
+
+      - name: Wait for temporary SonarQube
+        env:
+          SONAR_HOST_URL: http://127.0.0.1:9000
+        run: |
+          for attempt in $(seq 1 90); do
+            response="$(curl --silent --max-time 2 "$SONAR_HOST_URL/api/system/status" 2>/dev/null || true)"
+            if jq -e '.status == "UP"' >/dev/null 2>&1 <<<"$response"; then
+              echo "Temporary SonarQube is ready."
+              exit 0
+            fi
+            sleep 4
+          done
+
+          echo "Temporary SonarQube did not become ready within six minutes." >&2
+          exit 1
+
+      - name: Create temporary SonarQube project and token
+        env:
+          SONAR_HOST_URL: http://127.0.0.1:9000
+        run: |
+          set -euo pipefail
+
+          sonar_request() {
+            local response_file status
+            response_file="$(mktemp)"
+            if ! status="$(curl --silent --show-error --output "$response_file" --write-out '%{http_code}' "$@")"; then
+              rm -f "$response_file"
+              return 1
+            fi
+
+            if [[ ! "$status" =~ ^2[0-9]{2}$ ]]; then
+              echo "SonarQube API returned HTTP $status." >&2
+              if [[ -s "$response_file" ]]; then
+                jq -r 'if type == "object" and (.errors? != null) then .errors[].msg else (.message // .) end' "$response_file" >&2 || cat "$response_file" >&2
+              fi
+              rm -f "$response_file"
+              return 1
+            fi
+
+            cat "$response_file"
+            rm -f "$response_file"
+          }
+
+          admin_password="Aa9!$(openssl rand -hex 32)"
+          sonar_request \
+            --user admin:admin \
+            --data-urlencode login=admin \
+            --data-urlencode previousPassword=admin \
+            --data-urlencode "password=$admin_password" \
+            "$SONAR_HOST_URL/api/users/change_password" >/dev/null
+
+          sonar_request \
+            --user "admin:$admin_password" \
+            --data-urlencode project=SparkControlPlane \
+            --data-urlencode "name=Spark Control Plane" \
+            "$SONAR_HOST_URL/api/projects/create" >/dev/null
+
+          profiles_response="$(sonar_request \
+            --user "admin:$admin_password" \
+            --get \
+            --data-urlencode ps=500 \
+            "$SONAR_HOST_URL/api/qualityprofiles/search")"
+          mapfile -t comprehensive_languages < <(
+            jq -r '.profiles[]? | select(.name == "Sonar way comprehensive") | .language' \
+              <<<"$profiles_response" | sort -u
+          )
+          if [[ "${#comprehensive_languages[@]}" -eq 0 ]]; then
+            echo "Sonar way comprehensive profiles were not found in the temporary SonarQube instance." >&2
+            exit 1
+          fi
+
+          for language in "${comprehensive_languages[@]}"; do
+            sonar_request \
+              --user "admin:$admin_password" \
+              --data-urlencode project=SparkControlPlane \
+              --data-urlencode "language=$language" \
+              --data-urlencode "qualityProfile=Sonar way comprehensive" \
+              "$SONAR_HOST_URL/api/qualityprofiles/add_project" >/dev/null
+          done
+
+          token_response="$(sonar_request \
+            --user "admin:$admin_password" \
+            --data-urlencode "name=github-actions-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --data-urlencode type=USER_TOKEN \
+            "$SONAR_HOST_URL/api/user_tokens/generate")"
+          sonar_token="$(jq -er '.token' <<<"$token_response")"
+          echo "::add-mask::$sonar_token"
+          printf 'SONAR_TOKEN=%s\n' "$sonar_token" >> "$GITHUB_ENV"
+
+      - name: Scan PR snapshot as the temporary main branch
+        env:
+          SONAR_HOST_URL: http://127.0.0.1:9000
+        run: |
+          env -u CI \
+            -u GITHUB_ACTIONS \
+            -u GITHUB_EVENT_NAME \
+            -u GITHUB_EVENT_PATH \
+            -u GITHUB_BASE_REF \
+            -u GITHUB_HEAD_REF \
+            -u GITHUB_REF \
+            -u GITHUB_REF_NAME \
+            -u GITHUB_REPOSITORY \
+            -u GITHUB_SHA \
+            -u GITHUB_WORKFLOW \
+            npx --yes @sonar/scan@5.0.2 \
+              -Dsonar.projectKey=SparkControlPlane \
+              -Dsonar.projectName="Spark Control Plane" \
+              -Dsonar.sources=. \
+              -Dsonar.tests=tests \
+              '-Dsonar.exclusions=tests/**/*' \
+              -Dsonar.python.version=3.10,3.12 \
+              -Dsonar.sourceEncoding=UTF-8 \
+              -Dsonar.javascript.lcov.reportPaths=coverage/sonar/server-unit.lcov,coverage/sonar/web-unit.lcov,coverage/sonar/contract.lcov,coverage/sonar/integration-base.lcov
+
+      - name: Read Sonar issue details and coverage
+        id: read-sonar-scan-results
+        env:
+          SONAR_HOST_URL: http://127.0.0.1:9000
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_DIFF_CHECK_ENABLED: ${{ github.event_name == 'pull_request' }}
+        run: |
+          set -euo pipefail
+
+          task_id="$(sed -n 's/^ceTaskId=//p' .scannerwork/report-task.txt)"
+          if [[ -z "$task_id" ]]; then
+            echo "SonarScanner did not write a compute-engine task ID." >&2
+            exit 1
+          fi
+
+          task_status=""
+          for attempt in $(seq 1 120); do
+            task_response="$(curl --fail --silent --show-error \
+              --header "Authorization: Bearer $SONAR_TOKEN" \
+              --get --data-urlencode "id=$task_id" \
+              "$SONAR_HOST_URL/api/ce/task")"
+            task_status="$(jq -r '.task.status // empty' <<<"$task_response")"
+            case "$task_status" in
+              SUCCESS)
+                break
+                ;;
+              ERROR|CANCELED)
+                jq -r '.task.errorMessage // "SonarQube analysis failed."' <<<"$task_response" >&2
+                exit 1
+                ;;
+            esac
+            sleep 2
+          done
+
+          if [[ "$task_status" != "SUCCESS" ]]; then
+            echo "SonarQube did not finish analysis within four minutes." >&2
+            exit 1
+          fi
+
+          measures="$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer $SONAR_TOKEN" \
+            --get \
+            --data-urlencode component=SparkControlPlane \
+            --data-urlencode metricKeys=violations,coverage,ncloc,software_quality_security_issues,software_quality_reliability_issues,software_quality_maintainability_issues,software_quality_blocker_issues,software_quality_high_issues,software_quality_medium_issues,software_quality_low_issues,software_quality_info_issues \
+            "$SONAR_HOST_URL/api/measures/component")"
+          issue_count="$(jq -er '.component.measures[] | select(.metric == "violations") | .value' <<<"$measures")"
+          coverage="$(jq -er '.component.measures[] | select(.metric == "coverage") | .value' <<<"$measures")"
+          lines_of_code="$(jq -er '.component.measures[] | select(.metric == "ncloc") | .value' <<<"$measures")"
+
+          measure_value() {
+            jq -r --arg metric "$1" \
+              '[.component.measures[]? | select(.metric == $metric) | .value][0] // "0"' \
+              <<<"$measures"
+          }
+
+          security_issues="$(measure_value software_quality_security_issues)"
+          reliability_issues="$(measure_value software_quality_reliability_issues)"
+          maintainability_issues="$(measure_value software_quality_maintainability_issues)"
+          blocker_issues="$(measure_value software_quality_blocker_issues)"
+          high_issues="$(measure_value software_quality_high_issues)"
+          medium_issues="$(measure_value software_quality_medium_issues)"
+          low_issues="$(measure_value software_quality_low_issues)"
+          info_issues="$(measure_value software_quality_info_issues)"
+
+          attribute_categories="$(mktemp)"
+          issue_details="$(mktemp)"
+          changed_line_locations="$(mktemp)"
+          pr_changed_locations="$(mktemp)"
+          trap 'rm -f "$attribute_categories" "$issue_details" "$changed_line_locations" "$pr_changed_locations"' EXIT
+          if [[ "$PR_DIFF_CHECK_ENABLED" == "true" ]]; then
+            if [[ -z "$PR_BASE_SHA" || -z "$PR_HEAD_SHA" ]]; then
+              echo "Pull request base or head SHA is missing." >&2
+              exit 1
+            fi
+
+            git diff --no-ext-diff --no-renames --unified=0 \
+              "$PR_BASE_SHA...$PR_HEAD_SHA" -- |
+              awk '
+                /^\+\+\+ b\// {
+                  path = substr($0, 7)
+                  next
+                }
+                /^@@ / {
+                  if (match($0, /\+[0-9]+(,[0-9]+)?/)) {
+                    added_range = substr($0, RSTART + 1, RLENGTH - 1)
+                    split(added_range, range_parts, ",")
+                    first_line = range_parts[1] + 0
+                    line_count = (range_parts[2] == "" ? 1 : range_parts[2] + 0)
+                    for (offset = 0; offset < line_count; offset++) {
+                      print path "\t" first_line + offset
+                    }
+                  }
+                }
+              ' > "$changed_line_locations"
+
+            jq -Rn '[inputs | select(length > 0) | split("\t") | {path: .[0], line: (.[1] | tonumber)}]' \
+              "$changed_line_locations" > "$pr_changed_locations"
+          else
+            printf '[]\n' > "$pr_changed_locations"
+          fi
+          page_size=500
+          page=1
+          issue_total=""
+          while :; do
+            issues="$(curl --fail --silent --show-error \
+              --header "Authorization: Bearer $SONAR_TOKEN" \
+              --get \
+              --data-urlencode componentKeys=SparkControlPlane \
+              --data-urlencode "ps=$page_size" \
+              --data-urlencode "p=$page" \
+              "$SONAR_HOST_URL/api/issues/search")"
+            if [[ -z "$issue_total" ]]; then
+              issue_total="$(jq -er '.paging.total' <<<"$issues")"
+            fi
+            jq '.issues[]? | .cleanCodeAttributeCategory // "UNCLASSIFIED"' \
+              <<<"$issues" >> "$attribute_categories"
+            jq -c \
+              --argjson is_pull_request "$PR_DIFF_CHECK_ENABLED" \
+              --slurpfile changed_lines "$pr_changed_locations" '
+              .issues[]?
+              | . as $issue
+              | [
+                  (if any($issue.impacts[]?; .softwareQuality == "SECURITY") then "Security" else empty end),
+                  (if any($issue.impacts[]?; .softwareQuality == "RELIABILITY") then "Reliability" else empty end),
+                  (if (any($issue.impacts[]?; .severity == "HIGH") or $issue.severity == "HIGH") then "High" else empty end),
+                  (if $issue.cleanCodeAttributeCategory == "CONSISTENT" then "Consistency" else empty end),
+                  (if $issue.cleanCodeAttributeCategory == "ADAPTABLE" then "Adaptability" else empty end),
+                  (if $issue.cleanCodeAttributeCategory == "RESPONSIBLE" then "Responsibility" else empty end)
+                ] as $matched_categories
+              | (
+                  if $is_pull_request
+                    and ($issue.textRange.startLine != null or $issue.line != null) then
+                    ($issue.component // "unknown" | sub("^SparkControlPlane:"; "")) as $path
+                    | ($issue.textRange.startLine // $issue.line | tonumber) as $start_line
+                    | ($issue.textRange.endLine // $start_line | tonumber) as $end_line
+                    | any(
+                        $changed_lines[0][]?;
+                        .path == $path and .line >= $start_line and .line <= $end_line
+                      )
+                  else
+                    false
+                  end
+                ) as $in_pr_diff
+              | {
+                  key: (.key // "unknown"),
+                  severity: (
+                    [$issue.impacts[]? | .severity? | select(. != null)
+                      | if . == "HIGH" then "High"
+                        elif . == "MEDIUM" then "Medium"
+                        elif . == "LOW" then "Low"
+                        else . end
+                    ] as $severities
+                    | if ($severities | length) > 0 then
+                        ($severities | unique | join(", "))
+                      elif $issue.severity != null then
+                        $issue.severity
+                      else
+                        "—"
+                      end
+                  ),
+                  software_quality: (
+                    [$issue.impacts[]? | .softwareQuality? | select(. != null)
+                      | if . == "SECURITY" then "Security"
+                        elif . == "RELIABILITY" then "Reliability"
+                        elif . == "MAINTAINABILITY" then "Maintainability"
+                        else . end
+                    ]
+                    | if length == 0 then "—" else unique | join(", ") end
+                  ),
+                  code_attribute: (
+                    if $issue.cleanCodeAttributeCategory == "CONSISTENT" then "Consistency"
+                    elif $issue.cleanCodeAttributeCategory == "INTENTIONAL" then "Intentionality"
+                    elif $issue.cleanCodeAttributeCategory == "ADAPTABLE" then "Adaptability"
+                    elif $issue.cleanCodeAttributeCategory == "RESPONSIBLE" then "Responsibility"
+                    else "—" end
+                  ),
+                  details: (.message // "No message provided"),
+                  reference: (
+                    ((.component // "unknown") | sub("^SparkControlPlane:"; ""))
+                    + ":"
+                    + ((.textRange.startLine // .line // "file-level") | tostring)
+                  ),
+                  rule: (.rule // "unknown"),
+                  matched_categories: $matched_categories,
+                  in_pr_diff: $in_pr_diff
+                }
+            ' <<<"$issues" >> "$issue_details"
+            if (( page * page_size >= issue_total )); then
+              break
+            fi
+            page=$((page + 1))
+          done
+
+          attribute_counts="$(jq -s 'group_by(.) | map({(.[0]): length}) | add // {}' \
+            "$attribute_categories")"
+          consistency_issues="$(jq -r '.CONSISTENT // 0' <<<"$attribute_counts")"
+          intentionality_issues="$(jq -r '.INTENTIONAL // 0' <<<"$attribute_counts")"
+          adaptability_issues="$(jq -r '.ADAPTABLE // 0' <<<"$attribute_counts")"
+          responsibility_issues="$(jq -r '.RESPONSIBLE // 0' <<<"$attribute_counts")"
+          unclassified_issues="$(jq -r '.UNCLASSIFIED // 0' <<<"$attribute_counts")"
+
+          if [[ ! "$coverage" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+            echo "SonarQube returned an invalid coverage value." >&2
+            exit 1
+          fi
+          if [[ ! "$lines_of_code" =~ ^[0-9]+$ ]]; then
+            echo "SonarQube returned an invalid lines-of-code value." >&2
+            exit 1
+          fi
+          lines_of_code_formatted="$(awk -v value="$lines_of_code" 'BEGIN {
+            digit_count = length(value)
+            for (i = 1; i <= digit_count; i++) {
+              printf "%s", substr(value, i, 1)
+              if ((digit_count - i) % 3 == 0 && i < digit_count) {
+                printf ","
+              }
+            }
+            printf "\n"
+          }')"
+          mkdir -p coverage-badge
+          printf '{"schemaVersion":1,"label":"coverage","message":"%s%%","color":"yellowgreen"}\n' \
+            "$coverage" > coverage-badge/coverage.json
+          printf '{"schemaVersion":1,"label":"Lines of code","message":"%s","color":"blue"}\n' \
+            "$lines_of_code" > coverage-badge/lines-of-code.json
+          selected_issue_count="$(jq -s '[.[] | select(.matched_categories | length > 0)] | length' "$issue_details")"
+          if [[ "$PR_DIFF_CHECK_ENABLED" == "true" ]]; then
+            pr_issue_count="$(jq -s '[.[] | select(.in_pr_diff)] | length' "$issue_details")"
+            blocking_issue_count="$(jq -s '[.[] | select(.in_pr_diff and (.matched_categories | length > 0))] | length' "$issue_details")"
+          else
+            pr_issue_count=0
+            blocking_issue_count=0
+          fi
+          coverage_below_60="$(awk -v coverage="$coverage" 'BEGIN { print (coverage < 60) ? "true" : "false" }')"
+
+          write_issue_table() {
+            local table_filter="$1"
+            jq -r --arg table_filter "$table_filter" '
+              def markdown_cell:
+                tostring
+                | gsub("[\\r\\n\\t]+"; " ")
+                | gsub("&"; "&amp;")
+                | gsub("<"; "&lt;")
+                | gsub(">"; "&gt;")
+                | gsub("\\\\"; "&#92;")
+                | gsub("\\|"; "&#124;")
+                | gsub("\\["; "&#91;")
+                | gsub("\\]"; "&#93;")
+                | gsub("`"; "&#96;")
+                | gsub("\\*"; "&#42;")
+                | gsub("_"; "&#95;")
+                | gsub("~"; "&#126;");
+              . as $issue
+              | select(
+                  if $table_filter == "all-pr" then
+                    $issue.in_pr_diff
+                  elif $table_filter == "blocking-pr" then
+                    $issue.in_pr_diff and ($issue.matched_categories | length > 0)
+                  else
+                    ($issue.matched_categories | length > 0)
+                  end
+                )
+              | "| \($issue.severity | markdown_cell) | \($issue.software_quality | markdown_cell) | \($issue.code_attribute | markdown_cell) | \($issue.details | markdown_cell) | \($issue.reference | markdown_cell) | \($issue.rule | markdown_cell) |"
+            ' "$issue_details"
+          }
+
+          {
+            echo "## SonarQube Summary"
+            echo
+            if [[ "$PR_DIFF_CHECK_ENABLED" == "true" ]]; then
+              echo "The SonarQube check fails if code in this PR introduces new blocking issues or brings coverage below 60%."
+              echo "If blocking issues are found their details will be listed below."
+            else
+              echo "The SonarQube check lists all detected issues, and fails if coverage is below 60%."
+            fi
+            echo
+            echo "| Software Quality | Issues |"
+            echo "| --- | ---: |"
+            echo "| Security | $security_issues |"
+            echo "| Reliability | $reliability_issues |"
+            echo "| Maintainability | $maintainability_issues |"
+            echo
+            echo "| Severity | Issues |"
+            echo "| --- | ---: |"
+            echo "| Blocker | $blocker_issues |"
+            echo "| High | $high_issues |"
+            echo "| Medium | $medium_issues |"
+            echo "| Low | $low_issues |"
+            echo "| Info | $info_issues |"
+            echo
+            echo "| Code Attribute | Issues |"
+            echo "| --- | ---: |"
+            echo "| Consistency | $consistency_issues |"
+            echo "| Intentionality | $intentionality_issues |"
+            echo "| Adaptability | $adaptability_issues |"
+            echo "| Responsibility | $responsibility_issues |"
+            if (( unclassified_issues > 0 )); then
+              echo "| Unclassified | $unclassified_issues |"
+            fi
+            echo
+            echo "Total issues across source files: **$issue_count**"
+            echo
+            echo "Code coverage: ${coverage}%"
+            echo
+            echo "Lines of code: $lines_of_code_formatted"
+            echo
+            if [[ "$PR_DIFF_CHECK_ENABLED" == "true" ]]; then
+              echo "## Issues Created In This PR ($pr_issue_count)"
+              echo
+              if (( pr_issue_count > 0 )); then
+                echo "| Severity | Software Quality | Code Attribute | Issue Details | Reference | Rule |"
+                echo "| --- | --- | --- | --- | --- | --- |"
+                write_issue_table all-pr
+              else
+                echo "Hooray! Sonar did not detect any issues in this PR."
+              fi
+              echo
+              echo "## Blocking Issues ($blocking_issue_count)"
+              echo
+              if (( blocking_issue_count > 0 )); then
+                echo "| Severity | Software Quality | Code Attribute | Issue Details | Reference | Rule |"
+                echo "| --- | --- | --- | --- | --- | --- |"
+                write_issue_table blocking-pr
+              else
+                echo "Sonar did not detect any blocking issues in this PR."
+              fi
+            else
+              echo "## Blocking Issues"
+              echo
+              if (( selected_issue_count > 0 )); then
+                echo "| Severity | Software Quality | Code Attribute | Issue Details | Reference | Rule |"
+                echo "| --- | --- | --- | --- | --- | --- |"
+                write_issue_table selected
+              else
+                echo "Sonar did not detect any blocking issues."
+              fi
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "blocking_issue_count=$blocking_issue_count"
+            echo "coverage_below_60=$coverage_below_60"
+            echo "coverage=$coverage"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload Sonar scan result badge data
+        uses: actions/upload-artifact@v7
+        with:
+          name: sonar-scan-results-badges
+          path: coverage-badge/*.json
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Enforce Sonar quality gate
+        if: ${{ steps.read-sonar-scan-results.outputs.blocking_issue_count != '0' || steps.read-sonar-scan-results.outputs.coverage_below_60 == 'true' }}
+        env:
+          BLOCKING_ISSUE_COUNT: ${{ steps.read-sonar-scan-results.outputs.blocking_issue_count }}
+          COVERAGE_BELOW_60: ${{ steps.read-sonar-scan-results.outputs.coverage_below_60 }}
+          COVERAGE: ${{ steps.read-sonar-scan-results.outputs.coverage }}
+        run: |
+          set -euo pipefail
+          if (( BLOCKING_ISSUE_COUNT > 0 )); then
+            echo "::error::Sonar found $BLOCKING_ISSUE_COUNT blocking issue(s) in this PR."
+          fi
+          if [[ "$COVERAGE_BELOW_60" == "true" ]]; then
+            echo "::error::Code coverage is ${COVERAGE}%, below the 60% minimum."
+          fi
+          exit 1
+
+      - name: Report Sonar scan results unavailable
+        if: ${{ failure() && steps.read-sonar-scan-results.outcome != 'success' }}
+        run: |
+          {
+            echo "## Sonar scan results"
+            echo
+            echo "Sonar scan results could not be produced in the temporary SonarQube instance."
+          } >> "$GITHUB_STEP_SUMMARY"

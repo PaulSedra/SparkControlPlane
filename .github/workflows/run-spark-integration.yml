@@ -1,0 +1,55 @@
+name: Run Spark integration
+
+on:
+  workflow_call:
+    inputs:
+      spark_version:
+        required: true
+        type: string
+      polaris_version:
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    name: Run integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          cache: npm
+
+      - name: Set up Python
+        if: ${{ inputs.polaris_version == '' }}
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.10.12'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Python dependencies
+        if: ${{ inputs.polaris_version == '' }}
+        run: python -m pip install --disable-pip-version-check --no-cache-dir -r requirements.txt
+
+      - name: Run Spark integration tests
+        env:
+          SPARK_VERSION: ${{ inputs.spark_version }}
+          POLARIS_VERSION: ${{ inputs.polaris_version }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$POLARIS_VERSION" ]]; then
+            npm run test:integration:polaris -- --spark-version "$SPARK_VERSION"
+          else
+            npm run test:integration:spark -- --spark-version "$SPARK_VERSION"
+          fi

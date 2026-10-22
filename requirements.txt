@@ -1,0 +1,7 @@
+pyspark[pipelines]==4.2.0
+pandas==2.3.3
+pyarrow==20.0.0
+grpcio==1.76.0
+grpcio-status==1.76.0
+googleapis-common-protos==1.72.0
+zstandard==0.25.0
