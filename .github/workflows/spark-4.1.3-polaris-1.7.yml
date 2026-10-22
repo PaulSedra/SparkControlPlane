@@ -3,15 +3,17 @@ name: Build / Apache Spark 4.1.3, Polaris 1.7
 on:
   push:
     branches:
-      - main
       - branch-0.1
+  schedule:
+    - cron: '0 16 * * 5'
+      timezone: America/New_York
 
 permissions:
-  actions: read
+  contents: read
 
 jobs:
-  report:
-    uses: ./.github/workflows/report-build-integration-result.yml
+  integration:
+    uses: ./.github/workflows/run-spark-integration.yml
     with:
       spark_version: '4.1.3'
       polaris_version: '1.7'

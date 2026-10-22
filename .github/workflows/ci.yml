@@ -102,33 +102,18 @@ jobs:
 
   spark-integration:
     name: ${{ matrix.job_name }}
+    if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - job_name: Apache Spark 4.2.0
-            spark_version: '4.2.0'
-            test_script: test:integration:spark
-            requires_python_dependencies: true
           - job_name: Apache Spark 4.1.3
             spark_version: '4.1.3'
             test_script: test:integration:spark
             requires_python_dependencies: true
-          - job_name: Apache Spark 4.1.2
-            spark_version: '4.1.2'
-            test_script: test:integration:spark
-            requires_python_dependencies: true
-          - job_name: Apache Spark 4.2.0, Polaris 1.7
-            spark_version: '4.2.0'
-            test_script: test:integration:polaris
-            requires_python_dependencies: false
           - job_name: Apache Spark 4.1.3, Polaris 1.7
             spark_version: '4.1.3'
-            test_script: test:integration:polaris
-            requires_python_dependencies: false
-          - job_name: Apache Spark 4.1.2, Polaris 1.7
-            spark_version: '4.1.2'
             test_script: test:integration:polaris
             requires_python_dependencies: false
     steps:
@@ -174,6 +159,7 @@ jobs:
           CORE_TESTS_RESULT: ${{ needs.core-tests.result }}
           INTEGRATION_TESTS_RESULT: ${{ needs.integration-tests.result }}
           SPARK_INTEGRATION_RESULT: ${{ needs.spark-integration.result }}
+          WORKFLOW_EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
 
@@ -189,7 +175,11 @@ jobs:
 
           check_result "Core tests" "$CORE_TESTS_RESULT"
           check_result "Integration tests" "$INTEGRATION_TESTS_RESULT"
-          check_result "Spark integration tests" "$SPARK_INTEGRATION_RESULT"
+          if [[ "$WORKFLOW_EVENT_NAME" == "pull_request" ]]; then
+            check_result "Spark integration tests" "$SPARK_INTEGRATION_RESULT"
+          else
+            echo "Spark compatibility tests are skipped for $WORKFLOW_EVENT_NAME events."
+          fi
           exit "$failed"
 
   sonar-metrics:

@@ -16,6 +16,8 @@ const composeFile = path.join(repositoryRoot, 'compose.integration.yaml');
 const temporaryParent = path.join(repositoryRoot, 'tmp');
 const supportedSuites = new Set(['all', 'container', 'polaris', 'postgres', 'spark', 'upgrade']);
 const supportedSparkImageDigests = new Map([
+    ['4.1.0', 'b76109d3d702e0c66687051565d896a79341d1aca927d4da19c29d6da1e76e76'],
+    ['4.1.1', '0b8f5befe00d258df03b252158b3894b8654390f1958741accf98155539a662a'],
     ['4.1.2', 'ac7efd6404ef99d6a28ea54ea74fc8ac69c420a7af83a4718b59fecad856e447'],
     ['4.1.3', '7cdb42ed55b5e02c279e838e38da3336dae74dca6aef07defae93f3c197d8ed6'],
     ['4.2.0', '786b96ed0058a0f1411475b218105f556ae4dabb2849c8dd23f4a701e94dd2ca'],
