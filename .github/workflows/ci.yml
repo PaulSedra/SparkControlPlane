@@ -599,9 +599,14 @@ jobs:
           }
 
           {
-            echo "## SonarQube metrics"
+            echo "## SonarQube Summary"
             echo
-            echo "Metric counts cover the full analyzed snapshot. PR issue tables list issues on added lines; only selected categories block the PR."
+            if [[ "$PR_DIFF_CHECK_ENABLED" == "true" ]]; then
+              echo "The SonarQube check fails if code in this PR introduces new blocking issues or brings coverage below 60%."
+              echo "If blocking issues are found their details will be listed below."
+            else
+              echo "The SonarQube check lists all detected issues, and fails if coverage is below 60%."
+            fi
             echo
             echo "| Software Quality | Issues |"
             echo "| --- | ---: |"
@@ -626,6 +631,12 @@ jobs:
             if (( unclassified_issues > 0 )); then
               echo "| Unclassified | $unclassified_issues |"
             fi
+            echo
+            echo "Total issues across source files: **$issue_count**"
+            echo
+            echo "Code coverage: ${coverage}%"
+            echo
+            echo "Lines of code: $lines_of_code_formatted"
             echo
             if [[ "$PR_DIFF_CHECK_ENABLED" == "true" ]]; then
               echo "## Issues Created In This PR ($pr_issue_count)"
@@ -658,22 +669,6 @@ jobs:
                 echo "Sonar did not detect any blocking issues."
               fi
             fi
-            echo
-            echo "Total issues across source files: **$issue_count**"
-            echo
-            echo "Code coverage: ${coverage}%"
-            echo
-            echo "Lines of code: $lines_of_code_formatted"
-            echo
-            echo "Software Quality counts can overlap when a rule affects more than one quality."
-            echo
-            if [[ "$PR_DIFF_CHECK_ENABLED" == "true" ]]; then
-              echo "The Sonar check fails for selected issues on lines added by this PR or coverage below 60%."
-            else
-              echo "The Sonar issue gate applies to PR changes. Coverage below 60% fails on every run."
-            fi
-            echo
-            echo "This run uses a temporary SonarQube instance; findings are not retained after the job ends."
           } >> "$GITHUB_STEP_SUMMARY"
           {
             echo "blocking_issue_count=$blocking_issue_count"
