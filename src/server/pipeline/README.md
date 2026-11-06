@@ -88,9 +88,11 @@ session. Importing mounted Python definitions executes their module code.
 
 Append-flow registrations expose functions, names, targets, and source
 locations, but not resolved inputs. The manifest extracts
-`.read.table(...)` and `.readStream[...].table(...)` calls from registered
-function source without invoking the functions, following directly called
-helpers that share the flow module's globals. Extracted append-flow edges use
+`.read.table(...)`, `.readStream[...].table(...)`, and literal Spark SQL query
+inputs from registered function source without invoking the functions,
+following directly called helpers that share the flow module's globals. SQL
+query extraction recognizes `FROM` and `JOIN` references using both
+`STREAM(table_name)` and `STREAM table_name`. Extracted append-flow edges use
 `PYTHON_SOURCE_PATTERN` evidence with low confidence. Auto CDC registrations
 provide declared source and target datasets; their lineage uses
 `SPARK_GRAPH_REGISTRATION` evidence. Literal table names and uppercase module

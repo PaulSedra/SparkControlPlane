@@ -32,6 +32,11 @@ test('discovers Python outputs, flows, and literal and helper read lineage along
                     '',
                     'BRONZE_TABLE = "sample_catalog.bronze.source_events"',
                     'DIMENSION_TABLE = "sample_catalog.silver.dimensions"',
+                    'SQL_STREAM_QUERY = """',
+                    'SELECT * FROM STREAM(sample_catalog.bronze.sql_stream_events)',
+                    'JOIN STREAM sample_catalog.silver.sql_dimensions ON TRUE',
+                    'WHERE note <> "FROM STREAM(sample_catalog.bronze.not_a_source)"',
+                    '"""',
                     '',
                     'def read_events():',
                     '    read_dimensions()',
@@ -55,6 +60,14 @@ test('discovers Python outputs, flows, and literal and helper read lineage along
                     '@dp.append_flow(target=python_names.TABLE_NAME, name="append_helper")',
                     'def append_helper():',
                     '    return read_events().join(read_dimensions(), "entity_id")',
+                    '',
+                    '@dp.append_flow(target=python_names.TABLE_NAME, name="append_sql")',
+                    'def append_sql():',
+                    '    inline_events = SparkSession.active().sql("""',
+                    '        SELECT * FROM STREAM(sample_catalog.bronze.inline_stream_events)',
+                    '    """)',
+                    '    query_events = spark.sql(SQL_STREAM_QUERY)',
+                    '    return inline_events.unionByName(query_events)',
                     '',
                     'dp.create_auto_cdc_flow(',
                     '    target=python_names.TABLE_NAME,',
@@ -107,7 +120,7 @@ test('discovers Python outputs, flows, and literal and helper read lineage along
 
         const detail = await service.getPipeline(pipelineId);
         assert.deepEqual(detail.validationMessages, []);
-        assert.equal(detail.nodeCount, 5);
+        assert.equal(detail.nodeCount, 6);
         const triggers = await service.listTriggers();
         assert.equal(triggers.length, 1);
         assert.equal(triggers[0]?.name, 'python-discovery-schedule');
@@ -178,6 +191,17 @@ test('discovers Python outputs, flows, and literal and helper read lineage along
             }))
             .sort((left, right) => left.sourceNodeId.localeCompare(right.sourceNodeId)),
         flowInputs);
+        const sqlFlow = detail.nodes.find((node) =>
+            node.qualifiedName === 'sample_catalog.bronze.append_sql');
+        assert.ok(sqlFlow);
+        assert.deepEqual(detail.edges
+            .filter((edge) => edge.targetNodeId === sqlFlow.id)
+            .map((edge) => edge.sourceNodeId)
+            .sort(), [
+            'dataset:sample_catalog.bronze.inline_stream_events',
+            'dataset:sample_catalog.bronze.sql_stream_events',
+            'dataset:sample_catalog.silver.sql_dimensions',
+        ]);
         assert.equal(detail.nodes.some((node) =>
             node.qualifiedName === 'sample_catalog.silver.unused_table'), false);
         assert.ok(detail.edges.some((edge) =>

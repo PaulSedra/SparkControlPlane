@@ -8,6 +8,7 @@ import importlib.util
 import inspect
 import json
 import os
+import re
 import sys
 import textwrap
 from pathlib import Path
@@ -26,6 +27,21 @@ from pyspark.pipelines.output import (
     TemporaryView,
 )
 from spark_pipeline_spec import load_pipeline_spec_for_control_plane
+
+SQL_IDENTIFIER_PATTERN = r"(?:`(?:``|[^`])+`|[A-Za-z_][A-Za-z0-9_$]*)"
+SQL_MULTIPART_IDENTIFIER_PATTERN = (
+    rf"{SQL_IDENTIFIER_PATTERN}(?:\s*\.\s*{SQL_IDENTIFIER_PATTERN})*"
+)
+SQL_STREAM_TABLE_PATTERN = re.compile(
+    rf"\b(?:FROM|JOIN)\s+STREAM\s*(?:"
+    rf"\(\s*(?P<parenthesized>{SQL_MULTIPART_IDENTIFIER_PATTERN})\s*\)"
+    rf"|(?P<bare>{SQL_MULTIPART_IDENTIFIER_PATTERN}))",
+    re.IGNORECASE,
+)
+SQL_NON_CODE_PATTERN = re.compile(
+    r"--[^\r\n]*|/\*.*?\*/|'(?:''|\\.|[^'])*'|\"(?:\"\"|\\.|[^\"])*\"",
+    re.DOTALL,
+)
 
 
 def main() -> None:
@@ -170,6 +186,9 @@ def inspect_flow_function(
             if table_name is not None and table_name not in inputs:
                 inputs.append(table_name)
             continue
+        for table_name in sql_stream_table_names(call, function_globals):
+            if table_name not in inputs:
+                inputs.append(table_name)
         helper = module_helper_function(call, function_globals, visited_functions)
         if helper is not None:
             visited_functions.add(helper)
@@ -240,6 +259,51 @@ def literal_table_name(call: ast.Call, function_globals: dict[str, Any]) -> str 
         if isinstance(value, str):
             return value
     return None
+
+
+def sql_stream_table_names(
+    call: ast.Call,
+    function_globals: dict[str, Any],
+) -> list[str]:
+    """Return STREAM table references from a literal Spark SQL query."""
+    if not isinstance(call.func, ast.Attribute) or call.func.attr != "sql":
+        return []
+    query = literal_sql_query(call, function_globals)
+    if query is None:
+        return []
+    query_without_non_code = SQL_NON_CODE_PATTERN.sub(
+        lambda match: re.sub(r"\S", " ", match.group()),
+        query,
+    )
+    table_names: list[str] = []
+    for match in SQL_STREAM_TABLE_PATTERN.finditer(query_without_non_code):
+        table_name = match.group("parenthesized") or match.group("bare")
+        if table_name is None:
+            continue
+        normalized_name = re.sub(
+            r"`((?:``|[^`])*)`",
+            lambda identifier: identifier.group(1).replace("``", "`"),
+            table_name,
+        )
+        if normalized_name not in table_names:
+            table_names.append(normalized_name)
+    return table_names
+
+
+def literal_sql_query(call: ast.Call, function_globals: dict[str, Any]) -> str | None:
+    """Resolve literal SQL text or an uppercase module string constant."""
+    argument = call.args[0] if call.args else next(
+        (keyword.value for keyword in call.keywords if keyword.arg == "sqlQuery"),
+        None,
+    )
+    if isinstance(argument, ast.Constant) and isinstance(argument.value, str):
+        return argument.value
+    if isinstance(argument, ast.Name) and argument.id.isupper():
+        value = function_globals.get(argument.id)
+        if isinstance(value, str):
+            return value
+    return None
+
 
 def output_type(output: Output) -> str:
     """Map Spark output classes to the graph node types exposed by the UI.
