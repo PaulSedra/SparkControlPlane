@@ -262,47 +262,19 @@ def sql_stream_table_names(
     query = literal_sql_query(call, function_globals)
     if query is None:
         return []
-    tokens = _tokenize_sql(query)
+    return _sql_stream_table_names(_tokenize_sql(query))
+
+
+def _sql_stream_table_names(tokens: list[tuple[str, str]]) -> list[str]:
+    """Find and deduplicate table references in FROM/JOIN STREAM clauses."""
     table_names: list[str] = []
     seen_table_names: set[str] = set()
     token_index = 0
     while token_index < len(tokens):
-        token_type, token_value = tokens[token_index]
-        if (
-            token_type != _SQL_WORD
-            or token_value.upper() not in _SQL_SOURCE_KEYWORDS
-            or token_index + 1 >= len(tokens)
-            or tokens[token_index + 1][0] != _SQL_WORD
-            or tokens[token_index + 1][1].upper() != "STREAM"
-        ):
+        if not _is_sql_stream_clause(tokens, token_index):
             token_index += 1
             continue
-
-        identifier_index = token_index + 2
-        parenthesized = (
-            identifier_index < len(tokens)
-            and tokens[identifier_index] == (_SQL_PUNCTUATION, "(")
-        )
-        if parenthesized:
-            identifier_index += 1
-        table_name, next_token_index = _multipart_sql_identifier(
-            tokens,
-            identifier_index,
-        )
-        if parenthesized:
-            has_closing_parenthesis = (
-                next_token_index < len(tokens)
-                and tokens[next_token_index] == (_SQL_PUNCTUATION, ")")
-            )
-            if table_name is not None and has_closing_parenthesis:
-                if table_name not in seen_table_names:
-                    table_names.append(table_name)
-                    seen_table_names.add(table_name)
-                token_index = next_token_index + 1
-            else:
-                token_index = max(token_index + 1, next_token_index)
-            continue
-
+        table_name, next_token_index = _sql_stream_table_reference(tokens, token_index)
         if table_name is not None and table_name not in seen_table_names:
             table_names.append(table_name)
             seen_table_names.add(table_name)
@@ -310,44 +282,126 @@ def sql_stream_table_names(
     return table_names
 
 
+def _is_sql_stream_clause(tokens: list[tuple[str, str]], start: int) -> bool:
+    """Check whether a token position starts FROM/JOIN STREAM."""
+    return (
+        start + 1 < len(tokens)
+        and tokens[start][0] == _SQL_WORD
+        and tokens[start][1].upper() in _SQL_SOURCE_KEYWORDS
+        and tokens[start + 1][0] == _SQL_WORD
+        and tokens[start + 1][1].upper() == "STREAM"
+    )
+
+
+def _sql_stream_table_reference(
+    tokens: list[tuple[str, str]],
+    clause_index: int,
+) -> tuple[str | None, int]:
+    """Read a STREAM table reference and return the next token position."""
+    identifier_index = clause_index + 2
+    parenthesized = _has_sql_token(
+        tokens,
+        identifier_index,
+        _SQL_PUNCTUATION,
+        "(",
+    )
+    if parenthesized:
+        identifier_index += 1
+    table_name, next_token_index = _multipart_sql_identifier(
+        tokens,
+        identifier_index,
+    )
+    if not parenthesized:
+        return table_name, next_token_index
+    if table_name is None or not _has_sql_token(
+        tokens,
+        next_token_index,
+        _SQL_PUNCTUATION,
+        ")",
+    ):
+        return None, max(clause_index + 1, next_token_index)
+    return table_name, next_token_index + 1
+
+
+def _has_sql_token(
+    tokens: list[tuple[str, str]],
+    index: int,
+    token_type: str,
+    token_value: str,
+) -> bool:
+    """Check a token's type and value without indexing past the token list."""
+    return index < len(tokens) and tokens[index] == (token_type, token_value)
+
+
 def _tokenize_sql(query: str) -> list[tuple[str, str]]:
     """Split SQL into code tokens while consuming literals and comments linearly."""
     tokens: list[tuple[str, str]] = []
     position = 0
     while position < len(query):
-        character = query[position]
-        if character.isspace():
-            position += 1
-            continue
-        if query.startswith("--", position):
-            position += 2
-            while position < len(query) and query[position] not in "\r\n":
-                position += 1
-            continue
-        if query.startswith("/*", position):
-            position = _skip_sql_block_comment(query, position)
-            continue
-        if character in ("'", '"'):
-            position = _skip_sql_quoted_text(query, position, character)
-            tokens.append((_SQL_STRING, ""))
-            continue
-        if character == "`":
-            identifier, position = _read_sql_quoted_identifier(query, position)
-            if identifier is None:
-                tokens.append((_SQL_OTHER, ""))
-            else:
-                tokens.append((_SQL_IDENTIFIER, identifier))
-            continue
-        if _is_sql_identifier_start(character):
-            start = position
-            position += 1
-            while position < len(query) and _is_sql_identifier_part(query[position]):
-                position += 1
-            tokens.append((_SQL_WORD, query[start:position]))
-            continue
-        tokens.append((_SQL_PUNCTUATION, character))
-        position += 1
+        token, position = _next_sql_token(query, position)
+        if token is not None:
+            tokens.append(token)
     return tokens
+
+
+def _next_sql_token(
+    query: str,
+    position: int,
+) -> tuple[tuple[str, str] | None, int]:
+    """Read one code token or skip one whitespace/comment section."""
+    character = query[position]
+    if character.isspace():
+        return None, position + 1
+    comment_end = _skip_sql_comment(query, position)
+    if comment_end is not None:
+        return None, comment_end
+    if character in ("'", '"'):
+        next_position = _skip_sql_quoted_text(query, position, character)
+        return (_SQL_STRING, ""), next_position
+    if character == "`":
+        return _read_sql_quoted_identifier_token(query, position)
+    if _is_sql_identifier_start(character):
+        return _read_sql_word_token(query, position)
+    return (_SQL_PUNCTUATION, character), position + 1
+
+
+def _skip_sql_comment(query: str, start: int) -> int | None:
+    """Skip one SQL line or block comment, if one starts at this position."""
+    if query.startswith("--", start):
+        return _skip_sql_line_comment(query, start)
+    if query.startswith("/*", start):
+        return _skip_sql_block_comment(query, start)
+    return None
+
+
+def _skip_sql_line_comment(query: str, start: int) -> int:
+    """Skip through the end of a SQL line comment."""
+    position = start + 2
+    while position < len(query) and query[position] not in "\r\n":
+        position += 1
+    return position
+
+
+def _read_sql_quoted_identifier_token(
+    query: str,
+    start: int,
+) -> tuple[tuple[str, str], int]:
+    """Return a token for one backtick identifier, including malformed input."""
+    identifier, next_position = _read_sql_quoted_identifier(query, start)
+    if identifier is None:
+        return (_SQL_OTHER, ""), next_position
+    return (_SQL_IDENTIFIER, identifier), next_position
+
+
+def _read_sql_word_token(
+    query: str,
+    start: int,
+) -> tuple[tuple[str, str], int]:
+    """Read one supported bare SQL identifier token."""
+    position = start + 1
+    while position < len(query) and _is_sql_identifier_part(query[position]):
+        position += 1
+    return (_SQL_WORD, query[start:position]), position
 
 
 def _skip_sql_block_comment(query: str, start: int) -> int:
