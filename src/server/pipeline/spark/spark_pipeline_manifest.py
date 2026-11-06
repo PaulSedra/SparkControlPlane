@@ -8,7 +8,6 @@ import importlib.util
 import inspect
 import json
 import os
-import re
 import sys
 import textwrap
 from pathlib import Path
@@ -28,20 +27,12 @@ from pyspark.pipelines.output import (
 )
 from spark_pipeline_spec import load_pipeline_spec_for_control_plane
 
-SQL_IDENTIFIER_PATTERN = r"(?:`(?:``|[^`])+`|[A-Za-z_][A-Za-z0-9_$]*)"
-SQL_MULTIPART_IDENTIFIER_PATTERN = (
-    rf"{SQL_IDENTIFIER_PATTERN}(?:\s*\.\s*{SQL_IDENTIFIER_PATTERN})*"
-)
-SQL_STREAM_TABLE_PATTERN = re.compile(
-    rf"\b(?:FROM|JOIN)\s+STREAM\s*(?:"
-    rf"\(\s*(?P<parenthesized>{SQL_MULTIPART_IDENTIFIER_PATTERN})\s*\)"
-    rf"|(?P<bare>{SQL_MULTIPART_IDENTIFIER_PATTERN}))",
-    re.IGNORECASE,
-)
-SQL_NON_CODE_PATTERN = re.compile(
-    r"--[^\r\n]*|/\*.*?\*/|'(?:''|\\.|[^'])*'|\"(?:\"\"|\\.|[^\"])*\"",
-    re.DOTALL,
-)
+_SQL_WORD = "word"
+_SQL_IDENTIFIER = "identifier"
+_SQL_STRING = "string"
+_SQL_PUNCTUATION = "punctuation"
+_SQL_OTHER = "other"
+_SQL_SOURCE_KEYWORDS = frozenset({"FROM", "JOIN"})
 
 
 def main() -> None:
@@ -271,23 +262,172 @@ def sql_stream_table_names(
     query = literal_sql_query(call, function_globals)
     if query is None:
         return []
-    query_without_non_code = SQL_NON_CODE_PATTERN.sub(
-        lambda match: re.sub(r"\S", " ", match.group()),
-        query,
-    )
+    tokens = _tokenize_sql(query)
     table_names: list[str] = []
-    for match in SQL_STREAM_TABLE_PATTERN.finditer(query_without_non_code):
-        table_name = match.group("parenthesized") or match.group("bare")
-        if table_name is None:
+    seen_table_names: set[str] = set()
+    token_index = 0
+    while token_index < len(tokens):
+        token_type, token_value = tokens[token_index]
+        if (
+            token_type != _SQL_WORD
+            or token_value.upper() not in _SQL_SOURCE_KEYWORDS
+            or token_index + 1 >= len(tokens)
+            or tokens[token_index + 1][0] != _SQL_WORD
+            or tokens[token_index + 1][1].upper() != "STREAM"
+        ):
+            token_index += 1
             continue
-        normalized_name = re.sub(
-            r"`((?:``|[^`])*)`",
-            lambda identifier: identifier.group(1).replace("``", "`"),
-            table_name,
+
+        identifier_index = token_index + 2
+        parenthesized = (
+            identifier_index < len(tokens)
+            and tokens[identifier_index] == (_SQL_PUNCTUATION, "(")
         )
-        if normalized_name not in table_names:
-            table_names.append(normalized_name)
+        if parenthesized:
+            identifier_index += 1
+        table_name, next_token_index = _multipart_sql_identifier(
+            tokens,
+            identifier_index,
+        )
+        if parenthesized:
+            has_closing_parenthesis = (
+                next_token_index < len(tokens)
+                and tokens[next_token_index] == (_SQL_PUNCTUATION, ")")
+            )
+            if table_name is not None and has_closing_parenthesis:
+                if table_name not in seen_table_names:
+                    table_names.append(table_name)
+                    seen_table_names.add(table_name)
+                token_index = next_token_index + 1
+            else:
+                token_index = max(token_index + 1, next_token_index)
+            continue
+
+        if table_name is not None and table_name not in seen_table_names:
+            table_names.append(table_name)
+            seen_table_names.add(table_name)
+        token_index = max(token_index + 1, next_token_index)
     return table_names
+
+
+def _tokenize_sql(query: str) -> list[tuple[str, str]]:
+    """Split SQL into code tokens while consuming literals and comments linearly."""
+    tokens: list[tuple[str, str]] = []
+    position = 0
+    while position < len(query):
+        character = query[position]
+        if character.isspace():
+            position += 1
+            continue
+        if query.startswith("--", position):
+            position += 2
+            while position < len(query) and query[position] not in "\r\n":
+                position += 1
+            continue
+        if query.startswith("/*", position):
+            position = _skip_sql_block_comment(query, position)
+            continue
+        if character in ("'", '"'):
+            position = _skip_sql_quoted_text(query, position, character)
+            tokens.append((_SQL_STRING, ""))
+            continue
+        if character == "`":
+            identifier, position = _read_sql_quoted_identifier(query, position)
+            if identifier is None:
+                tokens.append((_SQL_OTHER, ""))
+            else:
+                tokens.append((_SQL_IDENTIFIER, identifier))
+            continue
+        if _is_sql_identifier_start(character):
+            start = position
+            position += 1
+            while position < len(query) and _is_sql_identifier_part(query[position]):
+                position += 1
+            tokens.append((_SQL_WORD, query[start:position]))
+            continue
+        tokens.append((_SQL_PUNCTUATION, character))
+        position += 1
+    return tokens
+
+
+def _skip_sql_block_comment(query: str, start: int) -> int:
+    """Skip a possibly nested block comment without revisiting its contents."""
+    depth = 1
+    position = start + 2
+    while position < len(query) and depth > 0:
+        if query.startswith("/*", position):
+            depth += 1
+            position += 2
+        elif query.startswith("*/", position):
+            depth -= 1
+            position += 2
+        else:
+            position += 1
+    return position
+
+
+def _skip_sql_quoted_text(query: str, start: int, quote: str) -> int:
+    """Skip a SQL string, honoring doubled quotes and backslash escapes."""
+    position = start + 1
+    while position < len(query):
+        if query[position] == "\\" and position + 1 < len(query):
+            position += 2
+        elif query[position] == quote:
+            if position + 1 < len(query) and query[position + 1] == quote:
+                position += 2
+            else:
+                return position + 1
+        else:
+            position += 1
+    return position
+
+
+def _read_sql_quoted_identifier(query: str, start: int) -> tuple[str | None, int]:
+    """Read a backtick identifier and unescape doubled backticks."""
+    position = start + 1
+    while position < len(query):
+        if query[position] == "`":
+            if position + 1 < len(query) and query[position + 1] == "`":
+                position += 2
+            else:
+                value = query[start + 1:position].replace("``", "`")
+                return (value or None), position + 1
+        else:
+            position += 1
+    return None, position
+
+
+def _multipart_sql_identifier(
+    tokens: list[tuple[str, str]],
+    start: int,
+) -> tuple[str | None, int]:
+    """Read a dotted sequence of bare or backtick-quoted SQL identifiers."""
+    if start >= len(tokens) or tokens[start][0] not in (_SQL_WORD, _SQL_IDENTIFIER):
+        return None, start
+    parts = [tokens[start][1]]
+    position = start + 1
+    while (
+        position + 1 < len(tokens)
+        and tokens[position] == (_SQL_PUNCTUATION, ".")
+        and tokens[position + 1][0] in (_SQL_WORD, _SQL_IDENTIFIER)
+    ):
+        parts.append(tokens[position + 1][1])
+        position += 2
+    return ".".join(parts), position
+
+
+def _is_sql_identifier_start(character: str) -> bool:
+    """Return whether a character can begin the supported bare identifier form."""
+    return "A" <= character <= "Z" or "a" <= character <= "z" or character == "_"
+
+
+def _is_sql_identifier_part(character: str) -> bool:
+    """Return whether a character can continue the supported bare identifier form."""
+    return (
+        _is_sql_identifier_start(character)
+        or "0" <= character <= "9"
+        or character == "$"
+    )
 
 
 def literal_sql_query(call: ast.Call, function_globals: dict[str, Any]) -> str | None:

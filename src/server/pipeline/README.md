@@ -92,7 +92,9 @@ locations, but not resolved inputs. The manifest extracts
 inputs from registered function source without invoking the functions,
 following directly called helpers that share the flow module's globals. SQL
 query extraction recognizes `FROM` and `JOIN` references using both
-`STREAM(table_name)` and `STREAM table_name`. Extracted append-flow edges use
+`STREAM(table_name)` and `STREAM table_name`. Identifiers may be qualified and
+backtick-quoted; string literals and SQL comments, including nested block
+comments, are skipped. Extracted append-flow edges use
 `PYTHON_SOURCE_PATTERN` evidence with low confidence. Auto CDC registrations
 provide declared source and target datasets; their lineage uses
 `SPARK_GRAPH_REGISTRATION` evidence. Literal table names and uppercase module
