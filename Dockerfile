@@ -16,7 +16,7 @@ COPY . .
 RUN npm run build
 
 FROM ${PYTHON_IMAGE} AS runtime
-ARG APP_VERSION=0.1.0
+ARG APP_VERSION=0.1.2
 ARG IMAGE_SOURCE=not-specified
 ARG IMAGE_LICENSES=UNLICENSED
 LABEL org.opencontainers.image.title="Spark Control Plane" \
