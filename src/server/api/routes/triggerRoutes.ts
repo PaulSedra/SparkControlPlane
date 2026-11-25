@@ -15,7 +15,7 @@ import {
     TRIGGER_DEAD_LETTER_STATUSES,
     TriggerDeadLetterStatus,
 } from '../../../shared/status/trigger.ts';
-import type { PipelineHttpHandlerOptions } from '../httpTypes.ts';
+import type { ControlPlaneHttpHandlerOptions } from '../httpTypes.ts';
 import { requireAistorAuthorization } from '../http/authorization.ts';
 import { decodeSegment, readJsonBody, requireMethod } from '../http/request.ts';
 import {
@@ -39,7 +39,7 @@ export async function routeTriggerRequest(
     response: ServerResponse,
     url: URL,
     path: string,
-    options: PipelineHttpHandlerOptions,
+    options: ControlPlaneHttpHandlerOptions,
 ): Promise<boolean> {
     if (await routeTriggerEventRequest(service, request, response, url, path, options)) {
         return true;
@@ -56,7 +56,7 @@ async function routeTriggerEventRequest(
     response: ServerResponse,
     url: URL,
     path: string,
-    options: PipelineHttpHandlerOptions,
+    options: ControlPlaneHttpHandlerOptions,
 ): Promise<boolean> {
     if (path === '/api/v1/triggers/events') {
         if (request.method === 'GET') {

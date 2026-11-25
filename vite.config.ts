@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { pipelineRegistryApiPlugin } from './src/server/api/pipelineRegistryVitePlugin.ts';
+import { pipelineRegistryApiPlugin } from './src/server/api/controlPlaneApiVitePlugin.ts';
 
 export default defineConfig(() => {
     const sparkHistoryUrl = process.env.SPARK_HISTORY_URL?.trim() || undefined;

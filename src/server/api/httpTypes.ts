@@ -9,13 +9,13 @@ import type { PipelineRegistryService } from '../types/pipelineServiceTypes.ts';
 export type NextFunction = (error?: unknown) => void;
 
 /** Optional adapter settings; the webhook token is used only for AIStor event authorization. */
-export interface PipelineHttpHandlerOptions {
+export interface ControlPlaneHttpHandlerOptions {
     aistorWebhookToken?: string;
 }
 
 /** Already-constructed services and options used by the transport-only HTTP handler. */
 export interface PipelineHttpDependencies {
     catalogService: CatalogService;
-    options?: PipelineHttpHandlerOptions;
+    options?: ControlPlaneHttpHandlerOptions;
     pipelineService: PipelineRegistryService;
 }

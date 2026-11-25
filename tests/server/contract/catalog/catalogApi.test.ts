@@ -19,7 +19,7 @@ import {
     withWorkingDirectory,
 } from '../../../support/testEnvironment.ts';
 import { createTestDataLoader } from '../../../support/testData.ts';
-import { pipelineRegistryApiPlugin } from '../../../../src/server/api/pipelineRegistryVitePlugin.ts';
+import { pipelineRegistryApiPlugin } from '../../../../src/server/api/controlPlaneApiVitePlugin.ts';
 import type { CatalogService } from '../../../../src/server/types/catalogServiceTypes.ts';
 import type {
     SparkSampleData,

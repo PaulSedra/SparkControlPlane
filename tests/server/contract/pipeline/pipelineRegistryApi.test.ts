@@ -18,7 +18,7 @@ import { createPipelineFixture } from '../../../support/pipelineFixture.ts';
 import { createTestDataLoader } from '../../../support/testData.ts';
 import { captureEnvironment } from '../../../support/testEnvironment.ts';
 import { createPipelineRegistryService } from '../../../../src/server/pipeline/pipelineRegistryService.ts';
-import { pipelineRegistryApiPlugin } from '../../../../src/server/api/pipelineRegistryVitePlugin.ts';
+import { pipelineRegistryApiPlugin } from '../../../../src/server/api/controlPlaneApiVitePlugin.ts';
 import type { CanonicalTriggerEvent } from '../../../../src/server/types/triggerTypes.ts';
 
 const testData = createTestDataLoader('server/contract');

@@ -19,7 +19,7 @@ import { sendError, sendJson } from './http/response.ts';
 import type {
     NextFunction,
     PipelineHttpDependencies,
-    PipelineHttpHandlerOptions,
+    ControlPlaneHttpHandlerOptions,
 } from './httpTypes.ts';
 
 interface VersionedRequestContext {
@@ -39,7 +39,7 @@ interface VersionedRequestContext {
  * unknown paths to host middleware when available (otherwise returning JSON
  * 404). The host remains responsible for service initialization and shutdown.
  */
-export function createPipelineHttpHandler({
+export function createControlPlaneHttpHandler({
     pipelineService,
     catalogService,
     options = {},
@@ -78,7 +78,7 @@ async function routeRequest(
     catalogService: CatalogService,
     request: IncomingMessage,
     response: ServerResponse,
-    options: PipelineHttpHandlerOptions,
+    options: ControlPlaneHttpHandlerOptions,
 ): Promise<boolean> {
     const url = new URL(request.url ?? '/', 'http://localhost');
     const path = normalizedPath(url.pathname);
@@ -98,7 +98,7 @@ async function routeVersionedRequest(
     service: PipelineRegistryService,
     catalogService: CatalogService,
     context: VersionedRequestContext,
-    options: PipelineHttpHandlerOptions,
+    options: ControlPlaneHttpHandlerOptions,
 ): Promise<boolean> {
     const { correlationId, path, request, requestSource, response, url } = context;
     if (await routeCatalogRequest(catalogService, request, response, url, path)) {

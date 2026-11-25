@@ -5,7 +5,7 @@
 
 import type { ViteDevServer } from 'vite';
 import { handleApiDocumentationRequest } from './apiDocumentation.ts';
-import { createPipelineHttpHandler } from './pipelineRegistryHttp.ts';
+import { createControlPlaneHttpHandler } from './controlPlaneHttp.ts';
 import { createPipelineRegistryService } from '../pipeline/pipelineRegistryService.ts';
 import type { PipelineRegistryServiceOptions } from '../types/pipelineServiceTypes.ts';
 import { loadCatalogBackend } from '../config/catalogBackendConfig.ts';
@@ -45,7 +45,7 @@ export function pipelineRegistryApiPlugin(
                 postgresConfig: options.polarisPostgresConfig ?? options.postgresConfig,
                 sparkConnectUrl: options.sparkConnectUrl,
             });
-            const handler = createPipelineHttpHandler({
+            const handler = createControlPlaneHttpHandler({
                 pipelineService: service,
                 catalogService,
                 options: {

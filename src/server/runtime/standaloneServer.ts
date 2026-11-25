@@ -9,7 +9,7 @@ import {
 } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createPipelineHttpHandler } from '../api/pipelineRegistryHttp.ts';
+import { createControlPlaneHttpHandler } from '../api/controlPlaneHttp.ts';
 import { createCatalogService } from '../catalog/catalogServiceFactory.ts';
 import { loadProductionConfig } from '../config/productionConfig.ts';
 import { createPipelineRegistryService } from '../pipeline/pipelineRegistryService.ts';
@@ -69,7 +69,7 @@ export function createStandaloneControlPlane(
             postgresConfig: options.polarisPostgresConfig ?? config.postgres,
             sparkConnectUrl: config.sparkConnectUrl,
         });
-    const apiHandler = createPipelineHttpHandler({
+    const apiHandler = createControlPlaneHttpHandler({
         pipelineService: service,
         catalogService,
         options: {
