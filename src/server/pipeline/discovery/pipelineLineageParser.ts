@@ -42,6 +42,13 @@ interface SqlTokenization {
     tokens: SqlToken[];
 }
 
+interface SqlTokenizerState {
+    depth: number;
+    matchingParentheses: Map<number, number>;
+    openParentheses: number[];
+    tokens: SqlToken[];
+}
+
 interface LineageAccumulator {
     declaredNodes: Map<string, PipelineNode>;
     directEdges: PipelineEdge[];
@@ -656,68 +663,96 @@ function nextCteIndex(
 }
 
 function tokenizeSql(statement: string): SqlTokenization {
-    const matchingParentheses = new Map<number, number>();
-    const openParentheses: number[] = [];
-    const tokens: SqlToken[] = [];
-    let depth = 0;
-
+    const state: SqlTokenizerState = {
+        depth: 0,
+        matchingParentheses: new Map(),
+        openParentheses: [],
+        tokens: [],
+    };
     let index = 0;
     while (index < statement.length) {
-        const character = statement[index];
-        if (/\s/.test(character)) {
-            index += 1;
-            continue;
-        }
+        index = tokenizeSqlCharacter(statement, index, state);
+    }
+    return { matchingParentheses: state.matchingParentheses, tokens: state.tokens };
+}
 
-        if (character === "'" || character === '"' || character === '`') {
-            index = skipSqlQuotedValue(statement, index, character);
-            continue;
-        }
+function tokenizeSqlCharacter(
+    statement: string,
+    index: number,
+    state: SqlTokenizerState,
+): number {
+    const character = statement[index]!;
+    if (/\s/.test(character)) {
+        return index + 1;
+    }
+    if (character === "'" || character === '"' || character === '`') {
+        return skipSqlQuotedValue(statement, index, character);
+    }
+    if (isSqlIdentifierStart(character)) {
+        return appendSqlWordToken(statement, index, state);
+    }
+    if (character === '(') {
+        return appendSqlLeftParenthesis(statement, index, state);
+    }
+    if (character === ')') {
+        return appendSqlRightParenthesis(index, state);
+    }
+    if (character === ',') {
+        state.tokens.push({
+            depth: state.depth,
+            end: index + 1,
+            kind: 'comma',
+            start: index,
+            value: character,
+        });
+    }
+    return index + 1;
+}
 
-        if (isSqlIdentifierStart(character)) {
-            const start = index;
-            index += 1;
-            while (isSqlIdentifierPart(statement[index])) {
-                index += 1;
-            }
-            tokens.push({
-                depth,
-                end: index,
-                kind: 'word',
-                start,
-                value: statement.slice(start, index),
-            });
-            continue;
-        }
-
-        if (character === '(') {
-            const openIndex = tokens.length;
-            tokens.push({ depth, end: index + 1, kind: 'left-parenthesis', start: index, value: character });
-            openParentheses.push(openIndex);
-            depth += 1;
-            index += 1;
-            continue;
-        }
-
-        if (character === ')') {
-            depth = Math.max(0, depth - 1);
-            const closeIndex = tokens.length;
-            tokens.push({ depth, end: index + 1, kind: 'right-parenthesis', start: index, value: character });
-            const openIndex = openParentheses.pop();
-            if (openIndex != null && tokens[openIndex].depth === depth) {
-                matchingParentheses.set(openIndex, closeIndex);
-            }
-            index += 1;
-            continue;
-        }
-
-        if (character === ',') {
-            tokens.push({ depth, end: index + 1, kind: 'comma', start: index, value: character });
-        }
+function appendSqlWordToken(statement: string, start: number, state: SqlTokenizerState): number {
+    let index = start + 1;
+    while (isSqlIdentifierPart(statement[index])) {
         index += 1;
     }
+    state.tokens.push({
+        depth: state.depth,
+        end: index,
+        kind: 'word',
+        start,
+        value: statement.slice(start, index),
+    });
+    return index;
+}
 
-    return { matchingParentheses, tokens };
+function appendSqlLeftParenthesis(statement: string, index: number, state: SqlTokenizerState): number {
+    const openIndex = state.tokens.length;
+    state.tokens.push({
+        depth: state.depth,
+        end: index + 1,
+        kind: 'left-parenthesis',
+        start: index,
+        value: statement[index]!,
+    });
+    state.openParentheses.push(openIndex);
+    state.depth += 1;
+    return index + 1;
+}
+
+function appendSqlRightParenthesis(index: number, state: SqlTokenizerState): number {
+    state.depth = Math.max(0, state.depth - 1);
+    const closeIndex = state.tokens.length;
+    state.tokens.push({
+        depth: state.depth,
+        end: index + 1,
+        kind: 'right-parenthesis',
+        start: index,
+        value: ')',
+    });
+    const openIndex = state.openParentheses.pop();
+    if (openIndex != null && state.tokens[openIndex]!.depth === state.depth) {
+        state.matchingParentheses.set(openIndex, closeIndex);
+    }
+    return index + 1;
 }
 
 function skipSqlQuotedValue(
