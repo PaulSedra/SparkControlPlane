@@ -32,17 +32,7 @@ export function StatusIcon({
     }
 
     const accessibleLabel = label ?? STATUS_PRESENTATION_LABELS[status];
-    const Icon = status === StatusPresentationState.FAILED
-        ? XCircle
-        : status === StatusPresentationState.CANCELED
-            ? CircleMinus
-            : status === StatusPresentationState.WAITING
-                ? LoaderCircle
-                : status === StatusPresentationState.RUNNING
-                    ? RefreshCw
-                    : status === StatusPresentationState.SUCCEEDED
-                        ? CheckCircle2
-                        : CircleMinus;
+    const Icon = statusIcon(status);
     const statusClassName = `status-icon--${status}`;
     const classes = className == null
         ? statusClassName
@@ -56,4 +46,20 @@ export function StatusIcon({
             size="control"
         />
     );
+}
+
+function statusIcon(status: StatusPresentationStateValue) {
+    switch (status) {
+        case StatusPresentationState.FAILED:
+            return XCircle;
+        case StatusPresentationState.WAITING:
+            return LoaderCircle;
+        case StatusPresentationState.RUNNING:
+            return RefreshCw;
+        case StatusPresentationState.SUCCEEDED:
+            return CheckCircle2;
+        case StatusPresentationState.CANCELED:
+        default:
+            return CircleMinus;
+    }
 }
