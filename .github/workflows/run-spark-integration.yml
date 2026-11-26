@@ -6,6 +6,10 @@ on:
       spark_version:
         required: true
         type: string
+      java_version:
+        required: false
+        type: string
+        default: '17'
       polaris_version:
         required: false
         type: string
@@ -44,12 +48,13 @@ jobs:
 
       - name: Run Spark integration tests
         env:
+          JAVA_VERSION: ${{ inputs.java_version }}
           SPARK_VERSION: ${{ inputs.spark_version }}
           POLARIS_VERSION: ${{ inputs.polaris_version }}
         run: |
           set -euo pipefail
           if [[ -n "$POLARIS_VERSION" ]]; then
-            npm run test:integration:polaris -- --spark-version "$SPARK_VERSION"
+            npm run test:integration:polaris -- --spark-version "$SPARK_VERSION" --java-version "$JAVA_VERSION"
           else
-            npm run test:integration:spark -- --spark-version "$SPARK_VERSION"
+            npm run test:integration:spark -- --spark-version "$SPARK_VERSION" --java-version "$JAVA_VERSION"
           fi

@@ -108,12 +108,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - job_name: Apache Spark 4.1.3
-            spark_version: '4.1.3'
+          - job_name: Apache Spark 4.2.0, Java 21
+            spark_version: '4.2.0'
+            java_version: '21'
             test_script: test:integration:spark
             requires_python_dependencies: true
           - job_name: Apache Spark 4.1.3, Polaris 1.7
             spark_version: '4.1.3'
+            java_version: '17'
             test_script: test:integration:polaris
             requires_python_dependencies: false
     steps:
@@ -142,8 +144,9 @@ jobs:
       - name: Run Spark integration tests
         env:
           SPARK_VERSION: ${{ matrix.spark_version }}
+          JAVA_VERSION: ${{ matrix.java_version }}
           TEST_SCRIPT: ${{ matrix.test_script }}
-        run: npm run "$TEST_SCRIPT" -- --spark-version "$SPARK_VERSION"
+        run: npm run "$TEST_SCRIPT" -- --spark-version "$SPARK_VERSION" --java-version "$JAVA_VERSION"
 
   core-checks:
     name: Core checks
@@ -326,7 +329,7 @@ jobs:
               -Dsonar.sources=. \
               -Dsonar.tests=tests \
               '-Dsonar.exclusions=tests/**/*' \
-              -Dsonar.python.version=3.10,3.12 \
+              -Dsonar.python.version=3.10 \
               -Dsonar.sourceEncoding=UTF-8 \
               -Dsonar.javascript.lcov.reportPaths=coverage/sonar/server-unit.lcov,coverage/sonar/web-unit.lcov,coverage/sonar/contract.lcov,coverage/sonar/integration-base.lcov
 
@@ -652,7 +655,7 @@ jobs:
               if (( blocking_issue_count > 0 )); then
                 echo "| Severity | Software Quality | Code Attribute | Issue Details | Reference | Rule |"
                 echo "| --- | --- | --- | --- | --- | --- |"
-                write_issue_table blocking-pr
+                write_issue_table blocking-pr | tee /dev/stderr
               else
                 echo "Sonar did not detect any blocking issues in this PR."
               fi

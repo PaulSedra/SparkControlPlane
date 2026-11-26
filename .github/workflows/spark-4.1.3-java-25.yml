@@ -1,9 +1,10 @@
-name: Build / Apache Spark 4.2.0
+name: Build / Apache Spark 4.1.3, Java 25
 
 on:
   workflow_dispatch:
   push:
     branches:
+      - main
       - branch-0.1
   schedule:
     - cron: '0 16 * * 5'
@@ -16,4 +17,5 @@ jobs:
   integration:
     uses: ./.github/workflows/run-spark-integration.yml
     with:
-      spark_version: '4.2.0'
+      spark_version: '4.1.3'
+      java_version: '25'
