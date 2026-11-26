@@ -10,6 +10,8 @@ external data sources or catalog service.
 - `pipelines/demo-failure-pipeline/` raises an intentional error every time its
   Python materialized view runs.
 
-The demo's Spark catalog and warehouse live in the Spark container's temporary
-storage. `npm run demo:down` removes that container and its output tables; the
-PostgreSQL volume keeps pipeline and run history between demo sessions.
+The demo shares its Spark warehouse, Derby catalog metadata, and pipeline
+checkpoints through the `demo-spark-data` volume. `npm run demo:down` stops the
+containers and preserves the volumes, including PostgreSQL pipeline history.
+To reset all demo data, run
+`docker compose --file compose.dev.yaml down --volumes`.

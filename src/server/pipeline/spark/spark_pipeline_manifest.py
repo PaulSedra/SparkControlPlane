@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import glob
 import importlib.util
 import inspect
 import json
@@ -11,9 +12,9 @@ import os
 import sys
 import textwrap
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from pyspark.pipelines.flow import AutoCdcFlow, Flow
+from pyspark.pipelines.flow import Flow
 from pyspark.pipelines.graph_element_registry import (
     GraphElementRegistry,
     graph_element_registration_context,
@@ -34,6 +35,9 @@ _SQL_PUNCTUATION = "punctuation"
 _SQL_OTHER = "other"
 _SQL_SOURCE_KEYWORDS = frozenset({"FROM", "JOIN"})
 
+if TYPE_CHECKING:
+    from pyspark.pipelines.flow import AutoCdcFlow
+
 
 def main() -> None:
     """Run discovery for one spec and emit the JSON manifest consumed by Node."""
@@ -46,13 +50,19 @@ def main() -> None:
 def discover(spec_path: Path) -> dict[str, list[dict[str, Any]]]:
     """Import configured Python libraries and return their registered graph elements.
 
+    The spec must be directly inside a `resources` directory.
     Discovery temporarily changes cwd because relative library imports are
     project-relative. It restores the caller's cwd in `finally`, skips cache
     and non-Python matches, and records definitions rather than starting a
     Spark execution.
     """
+    spec_directory = spec_path.parent.resolve()
+    if spec_directory.name.lower() != "resources":
+        raise ValueError(
+            f"Pipeline specification must be inside a resources directory: {spec_path}"
+        )
+    root = spec_directory.parent
     spec = load_pipeline_spec_for_control_plane(spec_path)
-    root = spec_path.parent.resolve()
     registry = RecordingGraphElementRegistry()
     previous_directory = Path.cwd()
     add_pipeline_import_paths(root)
@@ -61,7 +71,9 @@ def discover(spec_path: Path) -> dict[str, list[dict[str, Any]]]:
         os.chdir(root)
         with graph_element_registration_context(registry):
             for library in spec.libraries:
-                for source_file in sorted(root.glob(library.include)):
+                pattern = os.path.normpath(str(spec_directory / library.include))
+                for source_path in sorted(glob.glob(pattern, recursive=True)):
+                    source_file = Path(source_path)
                     if (
                         not source_file.is_file()
                         or source_file.suffix.lower() != ".py"
@@ -120,7 +132,7 @@ class RecordingGraphElementRegistry(GraphElementRegistry):
         )
 
     def register_auto_cdc_flow(self, flow: AutoCdcFlow) -> None:
-        """Record an Auto CDC flow using its declared source and target."""
+        """Record an Auto CDC flow's declared source and target for lineage."""
         self.flows.append(
             {
                 "name": flow.name or flow.target,
@@ -218,11 +230,11 @@ def module_helper_function(
 
 
 def is_spark_table_read(call: ast.Call) -> bool:
-    """Check for `.read[Stream][...].table()` calls, including reader options."""
+    """Check SparkSession `.table()` and DataFrameReader `.table()` calls."""
     return (
         isinstance(call.func, ast.Attribute)
         and call.func.attr == "table"
-        and bool({"read", "readStream"} & expression_attribute_names(call.func.value))
+        and bool({"spark", "read", "readStream"} & expression_attribute_names(call.func.value))
     )
 
 

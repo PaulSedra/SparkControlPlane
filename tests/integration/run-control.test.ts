@@ -54,7 +54,7 @@ test('active local CLI cancellation and timeout reach terminal states without re
     const originalCwd = process.cwd();
     const restore = captureEnvironment(
         'PIPELINES_DIR',
-        'SPARK_CLI_STATE_DIRECTORY',
+        'PIPELINE_RUN_STATE_DIRECTORY',
     );
     const fixture = await createPipelineFixture({
         files: [{
@@ -69,14 +69,13 @@ test('active local CLI cancellation and timeout reach terminal states without re
     });
     process.chdir(fixture.root);
     process.env.PIPELINES_DIR = path.join(fixture.root, 'pipelines');
-    process.env.SPARK_CLI_STATE_DIRECTORY = path.join(fixture.root, 'run-state');
+    process.env.PIPELINE_RUN_STATE_DIRECTORY = path.join(fixture.root, 'run-state');
 
     let invocation = 0;
     const executor: LocalCliRunExecutor = async (
         run,
         _parsed,
         _executionMode,
-        _sparkConnectUrl,
         shouldCancel,
         onSnapshot,
         onLocalProcess,
@@ -187,7 +186,7 @@ test('runs launch concurrently and shutdown waits for active CLI execution', asy
     const restore = captureEnvironment(
         'PIPELINES_DIR',
         'PIPELINE_RUN_CONCURRENCY',
-        'SPARK_CLI_STATE_DIRECTORY',
+        'PIPELINE_RUN_STATE_DIRECTORY',
     );
     const temporaryRoot = await fs.mkdtemp(
         path.join(os.tmpdir(), 'spark-control-plane-load-pressure-'),
@@ -210,7 +209,7 @@ test('runs launch concurrently and shutdown waits for active CLI execution', asy
     process.chdir(temporaryRoot);
     process.env.PIPELINES_DIR = path.join(temporaryRoot, 'pipelines');
     process.env.PIPELINE_RUN_CONCURRENCY = '2';
-    process.env.SPARK_CLI_STATE_DIRECTORY = path.join(temporaryRoot, 'run-state');
+    process.env.PIPELINE_RUN_STATE_DIRECTORY = path.join(temporaryRoot, 'run-state');
     let activeExecutions = 0;
     let peakExecutions = 0;
     let submissionCount = 0;
@@ -218,7 +217,6 @@ test('runs launch concurrently and shutdown waits for active CLI execution', asy
         run,
         _parsed,
         executionMode,
-        _sparkConnectUrl,
         _shouldCancel,
         onSnapshot,
         onLocalProcess,
@@ -332,7 +330,7 @@ test('worker and persistence failures stop heartbeats and recover the saved CLI 
         'PIPELINES_DIR',
         'PIPELINE_RUN_LEASE_SECONDS',
         'PIPELINE_RUN_RECOVERY_INTERVAL_SECONDS',
-        'SPARK_CLI_STATE_DIRECTORY',
+        'PIPELINE_RUN_STATE_DIRECTORY',
     );
     const fixture = await createPipelineFixture({
         files: [{
@@ -348,7 +346,7 @@ test('worker and persistence failures stop heartbeats and recover the saved CLI 
     process.env.PIPELINES_DIR = path.join(fixture.root, 'pipelines');
     process.env.PIPELINE_RUN_LEASE_SECONDS = '3';
     process.env.PIPELINE_RUN_RECOVERY_INTERVAL_SECONDS = '1';
-    process.env.SPARK_CLI_STATE_DIRECTORY = path.join(fixture.root, 'run-state');
+    process.env.PIPELINE_RUN_STATE_DIRECTORY = path.join(fixture.root, 'run-state');
 
     const persistence = createInMemoryPersistence();
     const renewLease = persistence.renewLease.bind(persistence);
@@ -373,7 +371,6 @@ test('worker and persistence failures stop heartbeats and recover the saved CLI 
         run,
         parsed,
         executionMode,
-        _sparkConnectUrl,
         _shouldCancel,
         onSnapshot,
         onLocalProcess,
@@ -382,7 +379,7 @@ test('worker and persistence failures stop heartbeats and recover the saved CLI 
         const command = ['spark-pipelines', 'run'];
         const executionId = run.cliExecutionId ?? `local-cli-${run.runId}`;
         const runDirectory = run.cliRunDirectory ?? path.join(
-            process.env.SPARK_CLI_STATE_DIRECTORY!,
+            process.env.PIPELINE_RUN_STATE_DIRECTORY!,
             'runs',
             run.runId,
         );
@@ -477,7 +474,7 @@ test('replacement server monitors the same local CLI execution without resubmitt
     const restore = captureEnvironment(
         'PIPELINES_DIR',
         'PIPELINE_RUN_LEASE_SECONDS',
-        'SPARK_CLI_STATE_DIRECTORY',
+        'PIPELINE_RUN_STATE_DIRECTORY',
     );
     const fixture = await createPipelineFixture({
         files: [{
@@ -493,7 +490,7 @@ test('replacement server monitors the same local CLI execution without resubmitt
     process.chdir(temporaryRoot);
     process.env.PIPELINES_DIR = path.join(temporaryRoot, 'pipelines');
     process.env.PIPELINE_RUN_LEASE_SECONDS = '1';
-    process.env.SPARK_CLI_STATE_DIRECTORY = path.join(temporaryRoot, 'run-state');
+    process.env.PIPELINE_RUN_STATE_DIRECTORY = path.join(temporaryRoot, 'run-state');
 
     const persistence = createInMemoryPersistence();
     const supervisor = createLocalCliTestExecutor('COMPLETED');
@@ -558,7 +555,7 @@ test('replacement server records UNKNOWN when the local CLI supervisor is gone',
     const restore = captureEnvironment(
         'PIPELINES_DIR',
         'PIPELINE_RUN_LEASE_SECONDS',
-        'SPARK_CLI_STATE_DIRECTORY',
+        'PIPELINE_RUN_STATE_DIRECTORY',
     );
     const fixture = await createPipelineFixture({
         files: [{
@@ -574,7 +571,7 @@ test('replacement server records UNKNOWN when the local CLI supervisor is gone',
     process.chdir(temporaryRoot);
     process.env.PIPELINES_DIR = path.join(temporaryRoot, 'pipelines');
     process.env.PIPELINE_RUN_LEASE_SECONDS = '1';
-    process.env.SPARK_CLI_STATE_DIRECTORY = path.join(temporaryRoot, 'run-state');
+    process.env.PIPELINE_RUN_STATE_DIRECTORY = path.join(temporaryRoot, 'run-state');
 
     const persistence = createInMemoryPersistence();
     const supervisor = createLocalCliTestExecutor('UNKNOWN');
@@ -632,12 +629,10 @@ function createLocalCliTestExecutor(outcome: 'COMPLETED' | 'UNKNOWN'): {
         run,
         parsed,
         executionMode,
-        sparkConnectUrl,
         _shouldCancel,
         onSnapshot,
         onLocalProcess,
     ) => {
-        assert.equal(sparkConnectUrl, 'sc://test-spark-connect:15002');
         const command = ['spark-pipelines', 'run'];
         const identity: LocalCliRunSnapshot = {
             command,
@@ -707,7 +702,6 @@ function createRunControlService(
 ) {
     return createPipelineRegistryService({
         persistence,
-        sparkConnectUrl: 'sc://test-spark-connect:15002',
         runExecutor,
     });
 }

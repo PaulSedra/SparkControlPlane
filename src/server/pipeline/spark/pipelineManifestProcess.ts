@@ -5,6 +5,7 @@
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { boundedPositiveInteger } from '../../config/configValues.ts';
 import { resolvePythonExecutable } from '../../runtime/pythonRuntime.ts';
 import { pipelinePythonEnvironment } from '../execution/pipelineRuntime.ts';
 import type { PythonPipelineManifest } from '../discovery/pipelineDiscovery.ts';
@@ -151,13 +152,9 @@ function configuredManifestTimeoutMilliseconds(): number {
 
 function configuredManifestOutputLimitBytes(): number {
     const configured = Number(process.env.PIPELINE_DISCOVERY_OUTPUT_LIMIT_BYTES?.trim() ?? '');
-    return Number.isSafeInteger(configured) && configured > 0
-        ? Math.min(MAX_MANIFEST_OUTPUT_LIMIT_BYTES, configured)
-        : DEFAULT_MANIFEST_OUTPUT_LIMIT_BYTES;
-}
-
-function boundedPositiveInteger(value: number | undefined, fallback: number, maximum: number): number {
-    return value == null || !Number.isSafeInteger(value) || value < 1
-        ? fallback
-        : Math.min(maximum, value);
+    return boundedPositiveInteger(
+        configured,
+        DEFAULT_MANIFEST_OUTPUT_LIMIT_BYTES,
+        MAX_MANIFEST_OUTPUT_LIMIT_BYTES,
+    );
 }

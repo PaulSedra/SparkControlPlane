@@ -4,6 +4,8 @@
 
 import { spawnSync } from 'node:child_process';
 
+const terminalRunStatuses = new Set(['CANCELED', 'FAILED', 'SUCCEEDED', 'TIMED_OUT', 'UNKNOWN']);
+
 /**
  * Creates bounded helpers for exercising one running control-plane container.
  *
@@ -50,6 +52,15 @@ export function createContainerTestSupport({
             if (response.status === 200 && statuses.includes(response.body.status)) {
                 return response.body;
             }
+            if (response.status === 200 && terminalRunStatuses.has(response.body.status)) {
+                const events = await requestJson(
+                    '/api/v1/runs/' + encodeURIComponent(runId) + '/events?limit=100&offset=0',
+                );
+                throw new Error(
+                    'Run ' + runId + ' reached unexpected terminal state; last state: ' +
+                    formatRunDiagnostics(lastBody, events.body.items) + '.',
+                );
+            }
             await delay(200);
         }
         const events = await requestJson(
@@ -57,19 +68,7 @@ export function createContainerTestSupport({
         );
         throw new Error(
             'Run ' + runId + ' did not reach ' + statuses.join(', ') + '; last state: ' +
-            JSON.stringify({
-                endedAt: lastBody.endedAt,
-                events: events.body.items?.map((event) => event.eventType),
-                exitCode: lastBody.exitCode,
-                cliExecutionId: lastBody.cliExecutionId,
-                cliProcessId: lastBody.cliProcessId,
-                cliRunDirectory: lastBody.cliRunDirectory,
-                cliState: lastBody.cliState,
-                recoveryReason: lastBody.recoveryReason,
-                status: lastBody.status,
-                terminalReason: lastBody.terminalReason,
-                stdout: lastBody.stdout,
-            }) + '.',
+            formatRunDiagnostics(lastBody, events.body.items) + '.',
         );
     }
 
@@ -82,26 +81,24 @@ export function createContainerTestSupport({
             if (response.status === 200 && predicate(response.body)) {
                 return response.body;
             }
+            if (response.status === 200 && terminalRunStatuses.has(response.body.status)) {
+                const events = await requestJson(
+                    '/api/v1/runs/' + encodeURIComponent(runId) + '/events?limit=100&offset=0',
+                );
+                throw new Error(
+                    'Run ' + runId + ' reached an unexpected terminal state before the expected ' +
+                    'active state; last state: ' +
+                    formatRunDiagnostics(lastBody, events.body.items) + '.',
+                );
+            }
             await delay(200);
         }
         const events = await requestJson(
             '/api/v1/runs/' + encodeURIComponent(runId) + '/events?limit=100&offset=0',
         );
         throw new Error(
-            'Run ' + runId + ' did not reach the expected active local CLI state; last state: ' +
-            JSON.stringify({
-                endedAt: lastBody.endedAt,
-                events: events.body.items?.map((event) => event.eventType),
-                exitCode: lastBody.exitCode,
-                cliExecutionId: lastBody.cliExecutionId,
-                cliProcessId: lastBody.cliProcessId,
-                cliRunDirectory: lastBody.cliRunDirectory,
-                cliState: lastBody.cliState,
-                recoveryReason: lastBody.recoveryReason,
-                status: lastBody.status,
-                terminalReason: lastBody.terminalReason,
-                stdout: lastBody.stdout,
-            }) + '.',
+            'Run ' + runId + ' did not reach the expected active execution state; last state: ' +
+            formatRunDiagnostics(lastBody, events.body.items) + '.',
         );
     }
 
@@ -143,6 +140,23 @@ export function createContainerTestSupport({
         waitForRun,
         waitForRunPredicate,
     };
+}
+
+function formatRunDiagnostics(run, events) {
+    return JSON.stringify({
+        endedAt: run.endedAt,
+        events: events?.map((event) => event.eventType),
+        exitCode: run.exitCode,
+        cliExecutionId: run.cliExecutionId,
+        cliProcessId: run.cliProcessId,
+        cliRunDirectory: run.cliRunDirectory,
+        cliState: run.cliState,
+        recoveryReason: run.recoveryReason,
+        status: run.status,
+        terminalReason: run.terminalReason,
+        stdout: run.stdout,
+        stderr: run.stderr,
+    });
 }
 
 function delay(milliseconds) {

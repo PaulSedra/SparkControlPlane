@@ -1,5 +1,5 @@
 /**
- * @fileoverview Merges Polaris table metadata with Spark Connect detail while
+ * @fileoverview Merges Polaris table metadata with Spark detail while
  * keeping provider-specific aggregate properties out of the UI contract.
  */
 

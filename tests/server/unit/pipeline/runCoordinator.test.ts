@@ -101,7 +101,6 @@ test('shutdown waits for active run execution before detaching its monitor', asy
         _run,
         _parsed,
         _executionMode,
-        _sparkConnectUrl,
         _shouldCancel,
         _onSnapshot,
         onLocalProcess,
@@ -155,7 +154,6 @@ test('shutdown fences, detaches, and releases a run after its drain deadline', a
         _run,
         _parsed,
         _executionMode,
-        _sparkConnectUrl,
         _shouldCancel,
         _onSnapshot,
         onLocalProcess,
@@ -213,7 +211,7 @@ async function createCoordinatorHarness(
         'PIPELINES_DIR',
         'PIPELINE_RUN_LEASE_SECONDS',
         'PIPELINE_RUN_RECOVERY_INTERVAL_SECONDS',
-        'SPARK_CLI_STATE_DIRECTORY',
+        'PIPELINE_RUN_STATE_DIRECTORY',
     );
     const fixture = await createPipelineFixture({
         libraryInclude: null,
@@ -227,7 +225,7 @@ async function createCoordinatorHarness(
     process.env.PIPELINES_DIR = path.join(fixture.root, 'pipelines');
     process.env.PIPELINE_RUN_LEASE_SECONDS = '30';
     process.env.PIPELINE_RUN_RECOVERY_INTERVAL_SECONDS = '3600';
-    process.env.SPARK_CLI_STATE_DIRECTORY = path.join(fixture.root, 'cli-state');
+    process.env.PIPELINE_RUN_STATE_DIRECTORY = path.join(fixture.root, 'cli-state');
 
     try {
         await persistence.initialize();
@@ -247,7 +245,6 @@ async function createCoordinatorHarness(
             versionId: versionId(pipeline.sourceHash),
         });
         const coordinator = createRunCoordinator(
-            undefined,
             persistence,
             runExecutor,
         );

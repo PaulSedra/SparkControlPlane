@@ -2,8 +2,9 @@
 
 Spark Control Plane discovers, visualizes, deploys, runs, repairs, and inspects
 mounted Apache Spark Declarative Pipeline projects. PostgreSQL owns durable
-control-plane state, and Spark Connect provides pipeline execution and bounded
-data access.
+control-plane state, and Spark Standalone tracks one application per pipeline
+run. Catalog and preview requests submit their own bounded applications to the
+same Standalone master.
 
 ## System boundaries
 
@@ -17,9 +18,11 @@ data access.
   `GraphElementRegistry`.
 - The standalone Node server serves production traffic. The Vite plugin is a
   development adapter around shared server services.
-- Spark Connect is the execution and bounded preview endpoint. The optional
-  Spark History proxy provides historical Spark application details; persisted
-  PostgreSQL records remain authoritative for pipeline run history.
+- Each pipeline run has one Spark Standalone application. The `spark-pipelines`
+  client-mode driver runs in the Control Plane; the master allocates executors.
+  Catalog and preview queries also submit short-lived apps to that master. The
+  optional Spark History proxy provides historical application details;
+  PostgreSQL remains authoritative for pipeline run history.
 
 ## Data flow
 
@@ -27,10 +30,12 @@ data access.
 2. Parse SQL lineage and capture Python graph registration through PySpark.
 3. Serve registry and detail data to React through the shared API.
 4. Persist deployment state and accept asynchronous, idempotent run requests.
-5. Claim queued work independently of the HTTP request and execute it through
-   the installed PySpark Pipelines CLI.
+5. Claim queued work independently of the HTTP request and submit one Spark
+   Standalone application for the complete pipeline through the installed
+   PySpark Pipelines CLI.
 6. Persist current run projections and append-only events.
-7. Query selected datasets through bounded Spark Connect adapters.
+7. Query selected datasets through bounded Spark applications submitted to
+   Standalone.
 
 ## Source areas
 

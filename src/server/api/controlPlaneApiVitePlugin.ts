@@ -10,11 +10,12 @@ import { createPipelineRegistryService } from '../pipeline/pipelineRegistryServi
 import type { PipelineRegistryServiceOptions } from '../types/pipelineServiceTypes.ts';
 import { loadCatalogBackend } from '../config/catalogBackendConfig.ts';
 import { createCatalogService } from '../catalog/catalogServiceFactory.ts';
+import { createSparkStandaloneQueryService } from '../catalog/sparkStandaloneQueryService.ts';
 import type { CatalogBackend, CatalogService } from '../types/catalogServiceTypes.ts';
 import type { PostgresConfig } from '../types/postgresConfigTypes.ts';
 
 /** Options used to construct the Vite API plugin. */
-export interface PipelineRegistryApiPluginOptions extends PipelineRegistryServiceOptions {
+export interface ControlPlaneApiPluginOptions extends PipelineRegistryServiceOptions {
     aistorWebhookToken?: string;
     catalogBackend?: CatalogBackend;
     catalogService?: CatalogService;
@@ -33,17 +34,22 @@ export interface PipelineRegistryApiPluginOptions extends PipelineRegistryServic
  * optional shutdown hook; callers supplying an adapter should account for
  * that lifecycle call.
  */
-export function pipelineRegistryApiPlugin(
-    options: PipelineRegistryApiPluginOptions = {},
+export function controlPlaneApiPlugin(
+    options: ControlPlaneApiPluginOptions = {},
 ) {
     return {
-        name: 'spark-control-plane-pipeline-registry-api',
+        name: 'spark-control-plane-api',
         configureServer(server: ViteDevServer) {
-            const service = createPipelineRegistryService(options);
+            const sparkQueryService = options.sparkQueryService ??
+                createSparkStandaloneQueryService();
+            const service = createPipelineRegistryService({
+                ...options,
+                sparkQueryService,
+            });
             const catalogService = options.catalogService ?? createCatalogService({
                 backend: options.catalogBackend ?? loadCatalogBackend(process.env),
                 postgresConfig: options.polarisPostgresConfig ?? options.postgresConfig,
-                sparkConnectUrl: options.sparkConnectUrl,
+                queryService: sparkQueryService,
             });
             const handler = createControlPlaneHttpHandler({
                 pipelineService: service,

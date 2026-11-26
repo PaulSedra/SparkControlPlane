@@ -40,7 +40,6 @@ test('standalone HTTP readiness reports PostgreSQL for a PostgreSQL-backed servi
     const cleanupPool = new Pool(postgresPoolConfig(config));
     const service = createPipelineRegistryService({
         postgresConfig: config,
-        sparkConnectUrl: 'sc://unused-for-readiness:15002',
     });
     const controlPlane = createStandaloneControlPlane({
         config: {
@@ -49,7 +48,6 @@ test('standalone HTTP readiness reports PostgreSQL for a PostgreSQL-backed servi
             host: '127.0.0.1',
             port: 0,
             postgres: config,
-            sparkConnectUrl: 'sc://unused-for-readiness:15002',
             staticDirectory: path.resolve('dist'),
         },
         service,

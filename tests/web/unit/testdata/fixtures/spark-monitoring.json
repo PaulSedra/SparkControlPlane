@@ -31,8 +31,8 @@
     },
     "applications": [
       {
-        "id": "spark-connect-app",
-        "name": "spark-connect"
+        "id": "spark-master-app",
+        "name": "spark-driver"
       },
       {
         "id": "spark-thrift-app",
@@ -49,7 +49,7 @@
       },
       {
         "jobId": 2,
-        "description": "Spark Connect session run-123",
+        "description": "Spark driver run-123",
         "jobTags": [
           "SparkConnect_OperationTag_User__Session_run-123"
         ],

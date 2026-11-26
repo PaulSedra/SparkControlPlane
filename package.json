@@ -7,8 +7,8 @@
     "scripts": {
         "dev": "npm run dev:web",
         "dev:web": "vite --configLoader runner --host 127.0.0.1",
-        "demo:up": "docker compose --file compose.dev.yaml up --detach --build --wait && docker compose --file compose.dev.yaml port control-plane 8080",
-        "demo:down": "docker compose --file compose.dev.yaml down",
+        "demo:up": "node docker/start-demo.mjs",
+        "demo:down": "docker compose --file compose.dev.yaml down --remove-orphans",
         "build": "npm run build:web && npm run typecheck:server",
         "build:web": "npm run typecheck:web && vite build --configLoader runner",
         "lint": "eslint .",

@@ -19,7 +19,7 @@ import {
     withWorkingDirectory,
 } from '../../../support/testEnvironment.ts';
 import { createTestDataLoader } from '../../../support/testData.ts';
-import { pipelineRegistryApiPlugin } from '../../../../src/server/api/controlPlaneApiVitePlugin.ts';
+import { controlPlaneApiPlugin } from '../../../../src/server/api/controlPlaneApiVitePlugin.ts';
 import type { CatalogService } from '../../../../src/server/types/catalogServiceTypes.ts';
 import type {
     SparkSampleData,
@@ -76,7 +76,7 @@ test('catalog routes expose catalog, schema, table, and sample contracts', async
             const server = await createServer({
                 configFile: false,
                 logLevel: 'silent',
-                plugins: [pipelineRegistryApiPlugin({
+                plugins: [controlPlaneApiPlugin({
                     catalogService,
                     persistence: createInMemoryPersistence(),
                 })],

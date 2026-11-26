@@ -42,43 +42,10 @@ applied migration fails startup. New migrations are applied in filename order,
 one transaction per version. There are no destructive down migrations: use a
 PostgreSQL backup and a forward migration for production rollback/recovery.
 
-Migration `001_initial.sql` owns the base tables and indexes in the configured
-schema. Migration `002_run-cancellation-status.sql` extends the `runs` status
-constraint for cancellation and timeout states. Migration
-`003-run-policy-metadata.sql` adds per-pipeline run-policy metadata and timeout
-values, plus request, correlation, and event metadata. Its `allow_overlap`
-column captures the admission policy used by each submitted run. A run with
-`allow_overlap = false` waits while another run for its pipeline is active; a
-run with `allow_overlap = true` may be claimed alongside active runs. The
-default is `false`. Migration `004-run-queue-sequence.sql` adds the monotonic FIFO queue sequence and updates
-the queue index. Migration `005-run-lifecycle-diagnostics.sql` adds durable
-lease-loss, recovery-reason, and terminal-event diagnostics. Migration
-`006-run-spark-reattach.sql` records the former Spark Connect worker's session
-and operation fields for schema-history compatibility; the current runtime
-does not use Spark operation reattachment. Migration `007-run-refresh-modes.sql` adds selected refresh target
-names and extends the run-mode constraint for dry runs and selected refreshes.
-Migrations `008-trigger-foundation.sql` through
-`010-trigger-dead-letters.sql` add trigger definitions, normalized events,
-routing and delivery outcomes, and recoverable dead letters. Migration
-`011-yaml-trigger-ownership.sql` adds the `managed_by_yaml` ownership marker
-and index used by direct pipeline-YAML trigger reconciliation. YAML removal
-disables an owned trigger; it does not delete its event, delivery, or
-dead-letter history. Migration `013-run-remote-cli.sql` is retained as an
-already-versioned migration and is not used by the current execution path.
-Migration `014-run-local-cli.sql` adds local CLI identity, process state, run
-directory, start time, log offsets, the `UNKNOWN` run status, and its recovery
-index. Migration `015-run-recovery-index.sql` adds an index for active runs
-without a local CLI identity, including rows whose lease record was lost.
-Migration `016-unknown-run-node-outcome.sql` allows `UNKNOWN` node states so
-active node projections on an unverified run are not persisted as confirmed
-failures. Migration `017-run-success-dependencies.sql` adds durable successful-run
-handoffs. Migration `018-optional-pipeline-run-timeouts.sql` makes the legacy
-pipeline and run timeout columns nullable with no default. It clears the former
-global default from pipeline rows and queued or active runs; terminal run values are
-retained as historical records. Current pipeline timeout values come only from
-the optional YAML `timeout_seconds` setting.
-Together, these migrations define the complete
-application-owned object set for the current release:
+See the [migration history](../src/server/persistence/migrations/README.md) for
+a per-version summary.
+
+The application owns these database objects:
 
 | Object                      | Purpose                                                                                                                                          |
 |-----------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -99,7 +66,7 @@ application-owned object set for the current release:
 | `trigger_delivery_attempts` | Submission, replay, discard, and failure outcomes.                                                                                               |
 | `trigger_dead_letters`      | Failed delivery records retained for operator replay or discard.                                                                                 |
 
-The migration also creates these indexes and constraints:
+The schema also includes these indexes and constraints:
 
 - `pipelines_pkey`, the unique normalized-name constraint, and the deferred
   current-source foreign key.
@@ -119,8 +86,8 @@ The migration also creates these indexes and constraints:
   without a local CLI identity.
 - `audit_events_pkey` and `audit_events_time_idx`.
 
-Migration 003 also owns the legacy `allow_overlap` and optional `timeout_seconds`
-columns on `pipelines` and `runs`. It adds `caller_metadata`, `request_source`,
+The schema retains the legacy `allow_overlap` and optional `timeout_seconds`
+columns on `pipelines` and `runs`. It includes `caller_metadata`, `request_source`,
 and `correlation_id` on `runs`,
 the event correlation column, the audit request/correlation columns, and the
 `runs_active_pipeline_idx` and `run_events_run_cursor_idx` indexes.

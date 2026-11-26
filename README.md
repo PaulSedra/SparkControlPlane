@@ -8,7 +8,9 @@
 
 Spark Control Plane is a web UI for managing Apache Spark Declarative Pipelines
 (SDP). Discover pipeline projects, explore datasets and lineage, deploy pipeline
-versions, schedule runs, and monitor execution through Spark Connect.
+versions, schedule runs, and monitor execution through Spark Standalone. Each
+pipeline run submits one application for the complete pipeline and runs as a
+finite Spark Pipelines update.
 
 [Capabilities](#capabilities) ·
 [Compatibility](#build--compatibility-status) ·
@@ -24,9 +26,11 @@ versions, schedule runs, and monitor execution through Spark Connect.
 - Discover and inspect pipeline definitions from mounted project files.
 - Visualize declared datasets, Python outputs, flows, and lineage.
 - Deploy source versions and submit runs through the Spark Pipelines CLI.
+- Submit one Spark Standalone application per pipeline run. Each application
+  runs the full pipeline graph; Spark does not submit one application per node.
 - Schedule runs and route webhook and file-arrival events.
 - Browse Polaris or Spark catalog metadata and preview bounded samples through
-  Spark Connect.
+  short-lived Spark applications submitted to the configured Standalone master.
 - Persist pipeline identity, deployments, run state, and history in PostgreSQL.
 
 The [source architecture guide](src/README.md) is the canonical overview of
@@ -68,16 +72,17 @@ This roadmap outlines planned features for a future `1.0` release.
 
 ### Execution and Run Tracking
 
-- [ ] **Serverless pipeline execution.** Use Spark master as the cluster entry
-  point and remove the need for user-configured Spark Connect. Spark Control
-  Plane would ask the master to create a Python-compatible driver for each
-  pipeline; each driver would manage its executors.
+- [x] **Serverless pipeline execution.** Each run starts a driver in the
+      Control Plane container and submits one Spark application to the configured
+      Standalone master. The master allocates executors on its workers.
 - [ ] **Per-pipeline run tracking.** Have each driver report stages for its
   pipeline, enabling independent run tracking and clearer time spent queued,
   provisioning, and executing.
 
 ### Deployment and Editing
 
+- [ ] **Managed spark stack.** Give the user the option to let SCP manage the
+  entire spark stack.
 - [ ] **Version-controlled deployments.** Support pipelines deployed through a
   version control system.
 - [ ] **Workspace editor and commits.** Add live code editing and commits in the
@@ -112,15 +117,19 @@ These screenshots come from the repository's local demo stack.
 
 ## Quick start
 
-The local demo requires Node.js 24.19.0, Docker Engine, and Docker Compose
-v2.20 or later.
+The local demo requires Node.js 24.19.0, Docker Engine, and Docker Compose v2.20
+or later. `npm run demo:up` starts PostgreSQL, a local Spark Standalone master
+and worker, and the Control Plane. Pipeline runs use one application each; each
+Spark-backed catalog or preview query uses a short-lived application on that
+master. The demo worker and Spark applications are capped at 2 executor cores.
 
 ```powershell
 npm ci
 npm run demo:up
 ```
 
-Open the browser address printed by the command. Stop the demo with:
+The command prints the Control Plane and Spark Master browser links with their
+assigned loopback ports. Stop the demo with:
 
 ```powershell
 npm run demo:down

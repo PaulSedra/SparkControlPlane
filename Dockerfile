@@ -1,5 +1,8 @@
 ARG NODE_IMAGE=node:24.19.0-bookworm-slim
 ARG PYTHON_IMAGE=python:3.10.12-slim-bookworm
+ARG JAVA_RUNTIME_IMAGE=eclipse-temurin:21-jre-jammy
+
+FROM ${JAVA_RUNTIME_IMAGE} AS java-runtime
 
 FROM ${NODE_IMAGE} AS node-runtime
 
@@ -17,6 +20,7 @@ RUN npm run build
 
 FROM ${PYTHON_IMAGE} AS runtime
 ARG APP_VERSION=0.1.2
+ARG INTEGRATION_SPARK_VERSION=
 ARG IMAGE_SOURCE=not-specified
 ARG IMAGE_LICENSES=UNLICENSED
 LABEL org.opencontainers.image.title="Spark Control Plane" \
@@ -28,18 +32,22 @@ ENV NODE_ENV=production \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHON_EXECUTABLE=/usr/local/bin/python \
-    PYSPARK_PYTHON=/usr/local/bin/python \
-    PYSPARK_DRIVER_PYTHON=/usr/local/bin/python \
-    CONTROL_PLANE_PORT=8080
+    CONTROL_PLANE_PORT=8080 \
+    JAVA_HOME=/usr/local/java \
+    PATH=/usr/local/java/bin:${PATH}
 
 COPY requirements.txt /tmp/requirements.txt
 
 RUN apt-get update \
-    && apt-get install --no-install-recommends --yes openjdk-17-jre-headless tini \
+    && apt-get install --no-install-recommends --yes tini \
     && rm -rf /var/lib/apt/lists/* \
+    && if [ -n "${INTEGRATION_SPARK_VERSION}" ]; then \
+         sed -i "s/^pyspark\[pipelines\]==.*/pyspark[pipelines]==${INTEGRATION_SPARK_VERSION}/" /tmp/requirements.txt; \
+       fi \
     && pip install --no-cache-dir --disable-pip-version-check -r /tmp/requirements.txt
 
 WORKDIR /app
+COPY --from=java-runtime /opt/java/openjdk /usr/local/java
 COPY --from=node-runtime /usr/local/bin/node /usr/local/bin/node
 COPY --from=node-runtime /usr/local/lib/node_modules /usr/local/lib/node_modules
 COPY --from=javascript-dependencies /app/node_modules /app/node_modules

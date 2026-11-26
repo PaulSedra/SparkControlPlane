@@ -9,9 +9,9 @@ before changing this module.
   `pipelineSpecParser.ts`, and trigger mapping/binding in
   `yamlTriggerConfiguration.ts`.
 - Do not execute mounted Python pipeline code unless the project is trusted.
-- Preserve deployed-source hash checks, run-specific source snapshots, and the
-  single CLI process per run ID. A recovered CLI identity must be inspected;
-  never submit that run a second time.
+- Preserve deployed-source hash checks, run-specific source snapshots, and one
+  durable Spark submission per run ID. A recovered driver identity must be
+  monitored; never submit that run a second time.
 - Keep unverified terminal outcomes distinct from confirmed failures. Preserve
   confirmed node states and captured output during recovery.
 - Resolve flow selections to output datasets before passing targets to Spark.

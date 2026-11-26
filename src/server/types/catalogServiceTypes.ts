@@ -1,5 +1,5 @@
 /**
- * @fileoverview Server-side catalog adapter and construction option contracts.
+ * @fileoverview Server-side catalog adapter contracts.
  */
 
 import type {
@@ -30,10 +30,4 @@ export interface CatalogService {
     listSchemas: (catalog: string) => Promise<SparkSchema[]>;
     listTables: (catalog: string, schema: string) => Promise<SparkTable[]>;
     shutdown?: () => Promise<void>;
-}
-
-/** Optional runtime settings used when constructing a catalog adapter. */
-export interface CatalogServiceOptions {
-    pythonExecutable?: string;
-    sparkConnectUrl?: string;
 }

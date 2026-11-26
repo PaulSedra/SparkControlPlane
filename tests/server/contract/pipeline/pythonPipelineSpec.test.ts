@@ -1,6 +1,4 @@
-/**
- * @fileoverview Contract coverage for PySpark CLI spec loading with control-plane metadata.
- */
+/** @fileoverview Contract coverage for lightweight Spark pipeline metadata loading. */
 
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
@@ -15,9 +13,8 @@ const pythonExecutable = process.platform === 'win32'
     ? path.join(repositoryRoot, '.venv', 'Scripts', 'python.exe')
     : path.join(repositoryRoot, '.venv', 'bin', 'python');
 const pipelineAdapterDirectory = path.join(repositoryRoot, 'src', 'server', 'pipeline', 'spark');
-const pipelineRootDirectory = path.join(repositoryRoot, 'src', 'server', 'pipeline');
 
-test('loads the original PySpark spec path after removing SCP-only metadata', {
+test('loads Spark pipeline fields without importing Spark client dependencies', {
     skip: !existsSync(pythonExecutable),
 }, async () => {
     const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), 'spark-pipeline-spec-'));
@@ -25,15 +22,15 @@ test('loads the original PySpark spec path after removing SCP-only metadata', {
     await writeFile(specPath, [
         'name: Source Pipeline',
         'storage: /app/checkpoints/source',
+        'catalog: spark_catalog',
+        'database: default',
+        'configuration:',
+        '  spark.sql.shuffle.partitions: "2"',
         'libraries:',
         '  - glob:',
         '      include: ../src/**',
         'triggers:',
         '  - name: source-schedule',
-        '    schedule:',
-        '      cron: "0 0 * * *"',
-        '      timezone_id: UTC',
-        '      pause_status: PAUSED',
         'on_success:',
         '  pipeline: Target Pipeline',
         'timeout_seconds: 3600',
@@ -42,23 +39,27 @@ test('loads the original PySpark spec path after removing SCP-only metadata', {
 
     try {
         const script = [
+            'import importlib.abc',
             'import json',
             'import sys',
-            'from pyspark.pipelines import cli',
-            'import spark_pipeline_cli',
-            'def capture_run(spec_path, **_options):',
-            '    spec = cli.load_pipeline_spec(spec_path)',
-            '    print(json.dumps({"name": spec.name, "storage": spec.storage, "library_count": len(spec.libraries), "spec_path": str(spec_path)}))',
-            'cli.run = capture_run',
-            'sys.argv = ["spark-pipelines", "run", "--spec", sys.argv[1]]',
-            'spark_pipeline_cli.main()',
+            'class ConnectDependencyBlocker(importlib.abc.MetaPathFinder):',
+            '    def find_spec(self, fullname, _path=None, _target=None):',
+            '        if fullname == "grpc" or fullname.startswith(("grpc.", "grpc_status", "google.rpc", "zstandard")):',
+            '            raise ImportError("Connect-only dependency was imported: " + fullname)',
+            '        return None',
+            'sys.meta_path.insert(0, ConnectDependencyBlocker())',
+            'from pathlib import Path',
+            'from spark_pipeline_spec import load_pipeline_spec_for_control_plane',
+            'from pyspark.pipelines import materialized_view',
+            'spec = load_pipeline_spec_for_control_plane(Path(sys.argv[1]))',
+            'print(json.dumps({"catalog": spec.catalog, "configuration": dict(spec.configuration), "database": spec.database, "libraries": [entry.include for entry in spec.libraries], "name": spec.name, "storage": spec.storage}))',
         ].join('\n');
         const result = spawnSync(pythonExecutable, ['-c', script, specPath], {
             cwd: repositoryRoot,
             encoding: 'utf8',
             env: {
                 ...process.env,
-                PYTHONPATH: [pipelineAdapterDirectory, pipelineRootDirectory, process.env.PYTHONPATH]
+                PYTHONPATH: [pipelineAdapterDirectory, process.env.PYTHONPATH]
                     .filter((entry) => entry != null && entry !== '')
                     .join(path.delimiter),
             },
@@ -67,9 +68,11 @@ test('loads the original PySpark spec path after removing SCP-only metadata', {
         assert.equal(result.status, 0, result.stderr || result.error?.message);
         const output = result.stdout.trim().split(/\r?\n/).at(-1);
         assert.deepEqual(JSON.parse(output ?? ''), {
-            library_count: 1,
+            catalog: 'spark_catalog',
+            configuration: { 'spark.sql.shuffle.partitions': '2' },
+            database: 'default',
+            libraries: ['../src/**'],
             name: 'Source Pipeline',
-            spec_path: specPath,
             storage: '/app/checkpoints/source',
         });
     } finally {

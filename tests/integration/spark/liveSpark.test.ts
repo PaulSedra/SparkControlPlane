@@ -1,5 +1,5 @@
 /**
- * @fileoverview Optional live Spark Connect integration scenarios.
+ * @fileoverview Optional live Spark Standalone integration scenarios.
  */
 
 import assert from 'node:assert/strict';
@@ -7,7 +7,6 @@ import crypto from 'node:crypto';
 import test from 'node:test';
 import { Pool } from 'pg';
 import { delay, fetchJson, pollUntil } from '../../support/httpTestSupport.ts';
-import { createSparkCatalogService } from '../../../src/server/catalog/sparkCatalogService.ts';
 import {
     getManagedTestContext,
     requireManagedTestContext,
@@ -17,35 +16,18 @@ import { loadPostgresConfig } from '../../../src/server/config/postgresConfig.ts
 
 const acceptanceEnabled = getManagedTestContext()?.controlPlaneBaseUrl != null &&
     process.env.PIPELINES_DIR?.trim() !== '' &&
-    process.env.SPARK_CONNECT_URL?.trim() !== '' &&
+    process.env.SPARK_MASTER_URL?.trim() !== '' &&
     hasDirectPostgresConfiguration();
 
-const sparkConnectUrl = process.env.SPARK_CONNECT_URL?.trim();
-const sparkCatalogEnabled = sparkConnectUrl != null && sparkConnectUrl !== '';
 const sparkBackendEnabled = getManagedTestContext()?.controlPlaneBaseUrl != null &&
     process.env.CATALOG_BACKEND?.trim() === 'spark';
-const defaultCatalogAcceptanceEnabled = acceptanceEnabled &&
-    getManagedTestContext()?.demoPipelineName != null && sparkBackendEnabled;
-
 async function refreshAllPipelines(baseUrl: string): Promise<void> {
     await fetchJson(`${baseUrl}/api/v1/pipelines/refresh-from-source`, 200, {
         method: 'POST',
     });
 }
 
-test('live Spark Connect catalog adapter returns listed catalogs', {
-    skip: !sparkCatalogEnabled,
-}, async () => {
-    const service = createSparkCatalogService({
-        sparkConnectUrl,
-    });
-    const catalogs = await service.listCatalogs();
-
-    assert.ok(Array.isArray(catalogs));
-    assert.ok(catalogs.every((catalog) => typeof catalog.name === 'string'));
-});
-
-test('Spark catalog backend exposes the built-in catalog through the app API', {
+test('Spark Standalone catalog backend exposes the built-in catalog through the app API', {
     skip: !sparkBackendEnabled,
 }, async () => {
     const context = requireManagedTestContext('Spark catalog backend integration test');
@@ -169,7 +151,7 @@ test('live Spark acceptance uses the container API and observes the run lifecycl
         }
 
         assert.ok(terminal, 'Container API run did not reach a terminal state.');
-        assert.equal(terminal.status, 'SUCCEEDED');
+        assert.equal(terminal.status, 'SUCCEEDED', JSON.stringify(terminal));
         assertOrderedStatuses(observedStatuses, ['QUEUED', 'SUBMITTING', 'RUNNING', 'SUCCEEDED']);
 
         const expectedNodeName = context.expectedNodeName;
@@ -242,110 +224,6 @@ test('live Spark acceptance uses the container API and observes the run lifecycl
                 'DELETE FROM audit_events WHERE correlation_id = ANY($1::text[])',
                 [correlations],
             );
-            await cleanupPool.query(
-                'DELETE FROM runs WHERE run_id = ANY($1::uuid[])',
-                [runIds],
-            );
-        }
-        await cleanupPool.end();
-    }
-});
-
-test('live Spark runs a demo pipeline in spark_catalog.default', {
-    skip: !defaultCatalogAcceptanceEnabled,
-}, async () => {
-    const context = requireManagedTestContext('Default catalog pipeline integration test');
-    const baseUrl = context.controlPlaneBaseUrl.replace(/\/$/, '');
-    const config = loadPostgresConfig();
-    const cleanupPool = new Pool(postgresPoolConfig(config));
-    const runIds: string[] = [];
-    const correlations: string[] = [];
-
-    try {
-        await refreshAllPipelines(baseUrl);
-        const list = await fetchJson<{ pipelines: unknown[] }>(`${baseUrl}/api/v1/pipelines`, 200);
-        const pipelines = asArray<{ id: string; name: string }>(list.pipelines);
-        const pipeline = pipelines.find((item) => item.name === context.demoPipelineName);
-        assert.ok(pipeline, `Default catalog demo pipeline was not discovered: ${context.demoPipelineName}`);
-
-        const detail = await fetchJson<{
-            nodes?: Array<{ id: string; nodeType: string; name?: string; qualifiedName?: string }>;
-            spec?: { catalog?: string; database?: string };
-        }>(`${baseUrl}/api/v1/pipelines/${encodeURIComponent(pipeline.id)}`, 200);
-        assert.equal(detail.spec?.catalog, 'spark_catalog');
-        assert.equal(detail.spec?.database, 'default');
-        const outputNode = detail.nodes?.find((node) =>
-            node.nodeType !== 'EXTERNAL_DATASET' &&
-            (node.id === context.expectedDemoNodeName ||
-                node.name === context.expectedDemoNodeName ||
-                node.qualifiedName === context.expectedDemoNodeName),
-        );
-        assert.ok(outputNode, 'The demo pipeline must expose its spark_catalog output node.');
-
-        const deployCorrelation = `spark-default-catalog-${crypto.randomUUID()}`;
-        correlations.push(deployCorrelation);
-        await fetchJson(
-            `${baseUrl}/api/v1/pipelines/${encodeURIComponent(pipeline.id)}/deploy`,
-            200,
-            {
-                headers: {
-                    'X-Correlation-ID': deployCorrelation,
-                    'X-Request-Source': 'spark-default-catalog-suite',
-                },
-                method: 'POST',
-            },
-        );
-
-        const runCorrelation = `spark-default-catalog-${crypto.randomUUID()}`;
-        correlations.push(runCorrelation);
-        const submitted = await fetchJson<{ runId: string; status: string }>(
-            `${baseUrl}/api/v1/pipelines/${encodeURIComponent(pipeline.id)}/runs`,
-            202,
-            {
-                body: JSON.stringify({ mode: 'incremental' }),
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Idempotency-Key': `spark-default-catalog-${crypto.randomUUID()}`,
-                    'X-Correlation-ID': runCorrelation,
-                    'X-Request-Source': 'spark-default-catalog-suite',
-                },
-                method: 'POST',
-            },
-        );
-        runIds.push(submitted.runId);
-
-        const terminal = await pollUntil(
-            async () => fetchJson<{ status: string }>(
-                `${baseUrl}/api/v1/runs/${encodeURIComponent(submitted.runId)}`,
-                200,
-            ),
-            (run) => isTerminal(run.status),
-            timeoutMilliseconds(),
-            100,
-            'Default catalog demo pipeline did not reach a terminal state.',
-        );
-        assert.equal(terminal.status, 'SUCCEEDED');
-
-        const data = await fetchJson<{ rows: unknown[] }>(
-            `${baseUrl}/api/v1/pipelines/${encodeURIComponent(pipeline.id)}` +
-                `/nodes/${encodeURIComponent(outputNode.id)}/data`,
-            200,
-        );
-        assert.ok(data.rows.length >= 2, 'Spark should return the sample rows from the demo output.');
-    } finally {
-        if (runIds.length > 0) {
-            await cleanupPool.query(
-                'DELETE FROM audit_events WHERE run_id = ANY($1::uuid[])',
-                [runIds],
-            );
-        }
-        if (correlations.length > 0) {
-            await cleanupPool.query(
-                'DELETE FROM audit_events WHERE correlation_id = ANY($1::text[])',
-                [correlations],
-            );
-        }
-        if (runIds.length > 0) {
             await cleanupPool.query(
                 'DELETE FROM runs WHERE run_id = ANY($1::uuid[])',
                 [runIds],

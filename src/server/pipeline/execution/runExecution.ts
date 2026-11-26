@@ -45,7 +45,6 @@ export interface RunExecutionDependencies {
     persistence: ControlPlanePersistence;
     run: PipelineRun;
     runExecutor: LocalCliRunExecutor;
-    sparkConnectUrl?: string;
 }
 
 /**
@@ -163,7 +162,6 @@ async function executeRunLifecycle(
             dependencies.run,
             preparation.parsed,
             dependencies.executionMode,
-            dependencies.sparkConnectUrl,
             () => dependencies.persistence.isCancellationRequested(dependencies.run.runId),
             (snapshot, output) => localPublisher.publish({ snapshot, output }),
             (controller) => controls.attachController(controller),

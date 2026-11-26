@@ -21,7 +21,7 @@ const requiredNames = [
     'POSTGRES_USER',
     'POSTGRES_PASSWORD',
     'AISTOR_WEBHOOK_TOKEN',
-    'SPARK_CONNECT_URL',
+    'SPARK_MASTER_URL',
 ];
 
 for (const name of requiredNames) {
@@ -32,6 +32,9 @@ for (const name of requiredNames) {
 if (!fs.existsSync(options.pipelinePath)) {
     throw new Error('The managed pipeline fixture path does not exist.');
 }
+if (!fs.existsSync(options.sparkPropertiesPath)) {
+    throw new Error('The managed Spark properties file does not exist.');
+}
 
 const image = options.image;
 const containerName = `spark-control-plane-container-test-${process.pid}-${Date.now()}`;
@@ -41,7 +44,6 @@ const pipelineName = options.pipelineName;
 const postgresCleanupHost = '127.0.0.1';
 const containerPostgresHost = options.containerPostgresHost;
 const containerPostgresPort = options.containerPostgresPort;
-const containerSparkConnectUrl = options.containerSparkConnectUrl;
 const hostPort = await availablePort();
 const baseUrl = `http://127.0.0.1:${hostPort}`;
 const containerEnvironment = {
@@ -49,11 +51,14 @@ const containerEnvironment = {
     CONTROL_PLANE_HOST: '0.0.0.0',
     CONTROL_PLANE_PORT: '8080',
     PIPELINES_DIR: '/app/pipelines',
+    PYTHON_EXECUTABLE: process.env.PYTHON_EXECUTABLE?.trim() || '/usr/local/bin/python',
     POSTGRES_HOST: containerPostgresHost,
     POSTGRES_PORT: containerPostgresPort,
     POSTGRES_SCHEMA: acceptanceSchema,
     POSTGRES_SSLMODE: process.env.POSTGRES_SSLMODE?.trim() || 'require',
-    SPARK_CONNECT_URL: containerSparkConnectUrl,
+    SPARK_DRIVER_HOST: containerName,
+    SPARK_EXECUTOR_PYTHON: process.env.SPARK_EXECUTOR_PYTHON?.trim() || 'python3',
+    SPARK_CLI_PROPERTIES_FILE: '/opt/integration/spark-defaults.conf',
     PIPELINE_RUN_LEASE_SECONDS: '5',
 };
 const testContext = {
@@ -77,6 +82,8 @@ try {
         '--name', containerName,
         '--publish', `127.0.0.1:${hostPort}:8080`,
         '--mount', `type=bind,source=${pipelineHostPath},target=/app/pipelines,readonly`,
+        '--mount', `type=bind,source=${path.resolve(options.sparkPropertiesPath)},target=/opt/integration/spark-defaults.conf,readonly`,
+        '--mount', `type=volume,source=${options.sparkDataVolume},target=/spark-shared`,
         ...forwardedEnvironmentNames().flatMap((name) => ['--env', name]),
         image,
     ], { env: containerEnvironment, network: options.network });
@@ -113,11 +120,12 @@ function parseOptions(args) {
     const options = {
         containerPostgresHost: requiredOption(args, '--container-postgres-host'),
         containerPostgresPort: requiredOption(args, '--container-postgres-port'),
-        containerSparkConnectUrl: requiredOption(args, '--container-spark-connect-url'),
         image: requiredOption(args, '--image'),
         network: optionalOption(args, '--network'),
         pipelineName: requiredOption(args, '--pipeline-name'),
         pipelinePath: requiredOption(args, '--pipeline-path'),
+        sparkDataVolume: requiredOption(args, '--spark-data-volume'),
+        sparkPropertiesPath: requiredOption(args, '--spark-properties-path'),
         skipBuild: args.includes('--skip-build'),
     };
     return options;
@@ -175,6 +183,7 @@ function forwardedEnvironmentNames() {
     return [
         'CONTROL_PLANE_HOST',
         'CONTROL_PLANE_PORT',
+        'CATALOG_BACKEND',
         'CONTROL_PLANE_DRAIN_SECONDS',
         'AISTOR_WEBHOOK_TOKEN',
         'PIPELINES_DIR',
@@ -183,9 +192,8 @@ function forwardedEnvironmentNames() {
         'PIPELINE_RUN_RECOVERY_BATCH_SIZE',
         'PIPELINE_RUN_POLICIES',
         'SPARK_CLI_BINARY',
-        'SPARK_CLI_PYTHON',
         'SPARK_CLI_PROPERTIES_FILE',
-        'SPARK_CLI_STATE_DIRECTORY',
+        'PIPELINE_RUN_STATE_DIRECTORY',
         'PYTHONPATH',
         'POSTGRES_HOST',
         'POSTGRES_PORT',
@@ -197,7 +205,10 @@ function forwardedEnvironmentNames() {
         'POSTGRES_SSLROOTCERT',
         'POSTGRES_SSLCERT',
         'POSTGRES_SSLKEY',
-        'SPARK_CONNECT_URL',
+        'SPARK_MASTER_URL',
+        'SPARK_DRIVER_HOST',
+        'SPARK_EXECUTOR_PYTHON',
+        'SPARK_CLI_PROPERTIES_FILE',
         'SPARK_HISTORY_URL',
     ].filter((name) => process.env[name] != null || containerEnvironment[name] != null);
 }

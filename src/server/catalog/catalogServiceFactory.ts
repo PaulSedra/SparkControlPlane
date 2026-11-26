@@ -3,6 +3,7 @@
  */
 
 import type { CatalogBackend, CatalogService } from '../types/catalogServiceTypes.ts';
+import type { SparkQueryService } from '../types/sparkQueryServiceTypes.ts';
 import type { PostgresConfig } from '../types/postgresConfigTypes.ts';
 import { createPolarisCatalogService } from './polarisCatalogService.ts';
 import { createSparkCatalogService } from './sparkCatalogService.ts';
@@ -12,24 +13,21 @@ export interface CatalogServiceFactoryOptions {
     backend: CatalogBackend;
     polarisPostgresConfig?: PostgresConfig;
     postgresConfig?: PostgresConfig;
-    sparkConnectUrl?: string;
+    queryService?: SparkQueryService;
 }
 
 /**
- * Creates a catalog adapter backed by either Polaris metadata or Spark Connect.
- * The Spark backend is useful for local development where the built-in
- * `spark_catalog` is the only catalog available.
+ * Creates a catalog adapter backed by Polaris metadata or Spark Standalone.
+ * The Spark backend exposes its configured catalog hierarchy.
  */
 export function createCatalogService(
     options: CatalogServiceFactoryOptions,
 ): CatalogService {
     if (options.backend === 'spark') {
-        return createSparkCatalogService({
-            sparkConnectUrl: options.sparkConnectUrl,
-        });
+        return createSparkCatalogService(options.queryService);
     }
     return createPolarisCatalogService({
         postgresConfig: options.polarisPostgresConfig ?? options.postgresConfig,
-        sparkConnectUrl: options.sparkConnectUrl,
+        queryService: options.queryService,
     });
 }

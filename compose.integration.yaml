@@ -39,6 +39,9 @@ services:
       - --credential=${POLARIS_REALM},${POLARIS_CLIENT_ID},${POLARIS_CLIENT_SECRET}
 
   polaris:
+    user: "0:0"
+    volumes:
+      - spark-shared-data:/spark-shared
     image: apache/polaris:1.7.0@sha256:e90a555b6d211646a97ab2768fdb0ab261beaf0f8eeae997f789b102939fc35b
     depends_on:
       polaris-bootstrap:
@@ -67,52 +70,82 @@ services:
       retries: 60
       start_period: 10s
 
-  spark-connect:
+  spark-master:
     build:
       context: ./docker/integration/spark
       args:
         SPARK_BASE_IMAGE: ${INTEGRATION_SPARK_BASE_IMAGE:?The integration Spark base image is required}
+        JAVA_RUNTIME_IMAGE: ${INTEGRATION_JAVA_RUNTIME_IMAGE:-eclipse-temurin:17-jre-jammy}
     image: ${INTEGRATION_SPARK_IMAGE:?The integration Spark image is required}
-    entrypoint: ["/opt/integration/start-connect-server.sh"]
+    entrypoint: ["/opt/spark/bin/spark-class"]
+    command:
+      - org.apache.spark.deploy.master.Master
+      - --host
+      - spark-master
+      - --port
+      - "7077"
+      - --webui-port
+      - "8080"
     environment:
-      CATALOG_BACKEND: ${CATALOG_BACKEND:?The integration catalog backend is required}
       HOME: /tmp
-      PYTHONPATH: /opt/spark/python:/opt/spark/python/lib/py4j-0.10.9.9-src.zip
-      POLARIS_CATALOG_NAME: ${POLARIS_CATALOG_NAME:?The integration Polaris catalog name is required}
-      POLARIS_CLIENT_ID: ${POLARIS_CLIENT_ID:?The integration Polaris client ID is required}
-      POLARIS_CLIENT_SECRET: ${POLARIS_CLIENT_SECRET:?The integration Polaris client secret is required}
-      POLARIS_REALM: ${POLARIS_REALM:?The integration Polaris realm is required}
-      SPARK_NO_DAEMONIZE: "1"
-      SPARK_LOCAL_IP: spark-connect
+      SPARK_LOCAL_IP: spark-master
       SPARK_LOCAL_DIRS: /tmp/spark-local
-    ports:
-      - "127.0.0.1:${SPARK_CONNECT_HOST_PORT:?The integration Spark host port is required}:15002"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/spark-master/7077'"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+      start_period: 10s
+
+  spark-worker:
+    user: "0:0"
+    image: ${INTEGRATION_SPARK_IMAGE:?The integration Spark image is required}
+    depends_on:
+      spark-master:
+        condition: service_healthy
+    entrypoint: ["/opt/spark/bin/spark-class"]
+    command:
+      - org.apache.spark.deploy.worker.Worker
+      - spark://spark-master:7077
+      - --host
+      - spark-worker
+      - --webui-port
+      - "8081"
+    environment:
+      HOME: /tmp
+      SPARK_LOCAL_IP: spark-worker
+      SPARK_LOCAL_DIRS: /tmp/spark-local
     volumes:
+      - type: bind
+        source: ${INTEGRATION_SPARK_PROPERTIES_PATH:?The integration Spark properties file is required}
+        target: /opt/integration/spark-defaults.conf
+        read_only: true
       - type: bind
         source: ./tests/integration/support/seed-integration-catalog.py
         target: /opt/integration/seed-integration-catalog.py
         read_only: true
+      - spark-shared-data:/spark-shared
     healthcheck:
-      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/15002'"]
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/spark-worker/8081'"]
       interval: 3s
       timeout: 5s
       retries: 60
-      start_period: 20s
+      start_period: 10s
 
   control-plane:
     build:
       context: .
       args:
         APP_VERSION: 0.1.2
+        INTEGRATION_SPARK_VERSION: ${INTEGRATION_SPARK_VERSION:?The integration PySpark version is required}
+        JAVA_RUNTIME_IMAGE: ${INTEGRATION_JAVA_RUNTIME_IMAGE:-eclipse-temurin:17-jre-jammy}
         NODE_IMAGE: node:24.19.0-bookworm-slim
         PYTHON_IMAGE: python:3.10.12-slim-bookworm
     image: ${INTEGRATION_CONTROL_PLANE_IMAGE:?The integration control-plane image is required}
     depends_on:
       postgres:
         condition: service_healthy
-      polaris:
-        condition: service_healthy
-      spark-connect:
+      spark-worker:
         condition: service_healthy
     environment:
       CONTROL_PLANE_HOST: 0.0.0.0
@@ -143,7 +176,10 @@ services:
       POLARIS_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POLARIS_POSTGRES_SSLMODE: disable
       POLARIS_POSTGRES_SCHEMA: ${POLARIS_POSTGRES_SCHEMA}
-      SPARK_CONNECT_URL: sc://spark-connect:15002
+      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_DRIVER_HOST: control-plane
+      SPARK_EXECUTOR_PYTHON: python3
+      SPARK_CLI_PROPERTIES_FILE: /opt/integration/spark-defaults.conf
       SPARK_HISTORY_URL: ${SPARK_HISTORY_URL:-}
     ports:
       - "127.0.0.1:${CONTROL_PLANE_HOST_PORT:?The integration control-plane host port is required}:8080"
@@ -152,6 +188,11 @@ services:
         source: ${INTEGRATION_PIPELINES_PATH:?The integration pipeline fixture path is required}
         target: /app/pipelines
         read_only: true
+      - type: bind
+        source: ${INTEGRATION_SPARK_PROPERTIES_PATH:?The integration Spark properties file is required}
+        target: /opt/integration/spark-defaults.conf
+        read_only: true
+      - spark-shared-data:/spark-shared
     healthcheck:
       test: ["CMD", "node", "docker/control-plane-healthcheck.mjs"]
       interval: 2s
@@ -161,6 +202,7 @@ services:
 
 volumes:
   integration-postgres-data:
+  spark-shared-data:
 
 networks:
   default:

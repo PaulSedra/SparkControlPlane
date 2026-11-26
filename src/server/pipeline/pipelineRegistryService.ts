@@ -56,7 +56,7 @@ import { createTriggerRegistryService } from './triggerRegistryService.ts';
 export function createPipelineRegistryService(
     options: PipelineRegistryServiceOptions = {},
 ): PipelineRegistryService {
-    const sparkConnectUrl = options.sparkConnectUrl?.trim();
+    const sparkQueryService = options.sparkQueryService;
     const persistence = options.persistence ?? createPostgresPersistence(
         options.postgresConfig ?? loadPostgresConfig(),
     );
@@ -70,11 +70,7 @@ export function createPipelineRegistryService(
     const now = options.now ?? (() => Date.now());
     let listPipelinesInFlight: Promise<PipelineSummary[]> | undefined;
     let sourceRefreshInFlight: Promise<PipelineSummary[]> | undefined;
-    const runCoordinator = createRunCoordinator(
-        sparkConnectUrl,
-        persistence,
-        options.runExecutor,
-    );
+    const runCoordinator = createRunCoordinator(persistence, options.runExecutor);
     const readiness = createPipelineReadinessService({
         isAcceptingWork: () => runCoordinator.isAcceptingWork(),
         now,
@@ -164,7 +160,7 @@ export function createPipelineRegistryService(
             getPipelineNodeData(
                 pipelineId,
                 nodeId,
-                sparkConnectUrl,
+                sparkQueryService,
                 persistence,
             ),
         getPipelineSourceFile: (pipelineId, sourceFile) =>

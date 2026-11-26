@@ -3,8 +3,8 @@
 Read the [catalog adapter architecture](README.md) and
 [`../README.md`](../README.md) before changing this module.
 
-- Preserve the CLI boundary, helper ownership, and JSON stdout/stderr contract
-  described in the README.
+- Preserve the query-driver boundary, helper ownership, and bounded result
+  contract described in the README.
 - Validate qualified catalog and schema values, quote identifiers before Spark
   SQL use, and retain row, byte, and time bounds.
 - Keep catalog and monitoring requests on their existing service paths.

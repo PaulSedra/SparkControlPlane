@@ -13,11 +13,22 @@ export function pipelineProjectRoot(specPath: string): string {
         : specDirectory;
 }
 
-/** Resolves the shared local directory for supervisor state and run snapshots. */
+/** Resolves a pipeline source path and rejects paths outside its root. */
+export function resolveInsideRoot(root: string, relativePath: string): string {
+    const resolvedRoot = path.resolve(root);
+    const resolvedPath = path.resolve(resolvedRoot, relativePath);
+    const relative = path.relative(resolvedRoot, resolvedPath);
+    if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+        throw new Error(`Pipeline source path escapes its project root: ${relativePath}`);
+    }
+    return resolvedPath;
+}
+
+/** Resolves the local directory for durable run source snapshots and results. */
 export function pipelineRunStateDirectory(
     environment: NodeJS.ProcessEnv = process.env,
 ): string {
-    return path.resolve(environment.SPARK_CLI_STATE_DIRECTORY?.trim() || '/app/run-state');
+    return path.resolve(environment.PIPELINE_RUN_STATE_DIRECTORY?.trim() || '/app/run-state');
 }
 
 /**

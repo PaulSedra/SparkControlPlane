@@ -65,6 +65,17 @@ test('run staging stays on the saved source after mounted files change', async (
 
     try {
         const parsed = await discoverPipelineAtPath(fixture.specPath, new Map());
+        await assert.rejects(
+            createVerifiedPipelineExecutionSnapshot(
+                parsed,
+                'different-deployment-hash',
+                runId,
+                stateDirectory,
+            ),
+            /Pipeline source changed while this run was being prepared/,
+        );
+        await assert.rejects(fs.access(stateDirectory), { code: 'ENOENT' });
+
         await fixture.writeFile(
             'sql/example.sql',
             'CREATE MATERIALIZED VIEW stale_view AS SELECT 2 AS value;\n',

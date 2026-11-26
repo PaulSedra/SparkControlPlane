@@ -13,7 +13,10 @@ export interface ProductionConfig {
     host: string;
     port: number;
     postgres?: PostgresConfig;
+    sparkDriverHost: string;
+    sparkExecutorPython?: string;
     sparkHistoryUrl?: string;
-    sparkConnectUrl: string;
+    sparkMasterUrl: string;
+    sparkPropertiesFile?: string;
     staticDirectory: string;
 }

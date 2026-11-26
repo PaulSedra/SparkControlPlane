@@ -1,11 +1,10 @@
 import path from 'node:path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { pipelineRegistryApiPlugin } from './src/server/api/controlPlaneApiVitePlugin.ts';
+import { controlPlaneApiPlugin } from './src/server/api/controlPlaneApiVitePlugin.ts';
 
 export default defineConfig(() => {
     const sparkHistoryUrl = process.env.SPARK_HISTORY_URL?.trim() || undefined;
-    const sparkConnectUrl = process.env.SPARK_CONNECT_URL?.trim();
     const aistorWebhookToken = process.env.AISTOR_WEBHOOK_TOKEN?.trim();
     const pipelinesDir = process.env.PIPELINES_DIR?.trim();
 
@@ -15,9 +14,8 @@ export default defineConfig(() => {
 
     return {
         envDir: path.join(process.cwd(), '.vite-no-env-files'),
-        plugins: [react(), pipelineRegistryApiPlugin({
+        plugins: [react(), controlPlaneApiPlugin({
             aistorWebhookToken,
-            sparkConnectUrl,
         })],
         root: path.resolve(process.cwd(), 'src/web'),
         build: {

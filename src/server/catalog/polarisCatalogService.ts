@@ -1,6 +1,6 @@
 /**
  * @fileoverview Catalog adapter that combines Polaris metadata with optional
- * Spark Connect enrichment.
+ * Spark query enrichment.
  */
 
 import type { Pool, PoolConfig, QueryResultRow } from 'pg';
@@ -20,6 +20,7 @@ import type {
     SparkTableDetail,
 } from '../../shared/catalogTypes.ts';
 import type { CatalogService } from '../types/catalogServiceTypes.ts';
+import type { SparkQueryService } from '../types/sparkQueryServiceTypes.ts';
 
 const POLARIS_REALM = 'POLARIS';
 const POLARIS_CATALOG_TYPE = 4;
@@ -52,7 +53,7 @@ export interface PolarisCatalogServiceOptions {
     polarisSchema?: string;
     postgresConfig?: PostgresConfig;
     realm?: string;
-    sparkConnectUrl?: string;
+    queryService?: SparkQueryService;
     sparkService?: Pick<CatalogService, 'getTable' | 'getTableData'>;
 }
 
@@ -60,7 +61,7 @@ export interface PolarisCatalogServiceOptions {
  * Creates a catalog service whose namespace and table identity come from
  * Polaris PostgreSQL metadata.
  *
- * Table details use Spark Connect only as optional enrichment; if enrichment
+ * Table details use Spark only as optional enrichment; if enrichment
  * is not configured or the operation is unsupported, authoritative Polaris
  * detail is returned. Permission, connection, and unexpected Spark failures
  * surface to the caller. Sample rows always use the Spark adapter, and the
@@ -82,8 +83,8 @@ export function createPolarisCatalogService(
     const ownsPool = options.pool == null && pool != null;
     const realm = options.realm?.trim() || process.env.POLARIS_REALM?.trim() || POLARIS_REALM;
     const schema = quoteIdentifier(postgresConfig?.schema || options.polarisSchema || POLARIS_SCHEMA);
-    const sparkConnectUrl = options.sparkConnectUrl?.trim();
-    const sparkService = options.sparkService ?? createSparkCatalogService({ sparkConnectUrl });
+    const queryService = options.queryService;
+    const sparkService = options.sparkService ?? createSparkCatalogService(queryService);
 
     return {
         getTable: async (catalog, namespace, table) => {
@@ -95,7 +96,7 @@ export function createPolarisCatalogService(
                 namespace,
                 table,
             );
-            if (!sparkConnectUrl) {
+            if (queryService == null && options.sparkService == null) {
                 return detail;
             }
             try {

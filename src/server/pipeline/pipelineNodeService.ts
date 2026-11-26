@@ -1,20 +1,20 @@
 /**
- * @fileoverview Resolves eligible pipeline nodes and reads their Spark Connect previews.
+ * @fileoverview Resolves eligible pipeline nodes and reads bounded Spark previews.
  */
 
 import type { PipelineNodeData } from '../../shared/pipelineRegistryTypes.ts';
 import type { ControlPlanePersistence } from '../types/pipelinePersistenceTypes.ts';
-import { runNodeDataQuery } from './spark/sparkNodePreview.ts';
+import type { SparkQueryService } from '../types/sparkQueryServiceTypes.ts';
 
-/** Reads a selected pipeline node's bounded sample, rejecting missing and external datasets. */
+/** Reads at most 100 rows for a selected node, rejecting missing and external datasets. */
 export async function getPipelineNodeData(
     pipelineId: string,
     nodeId: string,
-    sparkConnectUrl?: string,
+    sparkQueryService?: SparkQueryService,
     persistence?: ControlPlanePersistence,
 ): Promise<PipelineNodeData> {
-    if (!sparkConnectUrl) {
-        throw new Error('No Spark Connect target is configured for data samples.');
+    if (sparkQueryService == null) {
+        throw new Error('Spark Standalone is not configured for data samples.');
     }
     if (persistence == null) {
         throw new Error('Pipeline persistence is not configured.');
@@ -31,5 +31,17 @@ export async function getPipelineNodeData(
         throw new Error('Unknown pipeline dataset.');
     }
 
-    return runNodeDataQuery(node.qualifiedName, sparkConnectUrl);
+    const value = await sparkQueryService.query({
+        command: 'preview',
+        limit: 100,
+        qualifiedName: node.qualifiedName,
+    });
+    if (!isRecord(value) || !Array.isArray(value.columns) || !Array.isArray(value.rows)) {
+        throw new Error('Spark returned an invalid data sample.');
+    }
+    return value as unknown as PipelineNodeData;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value != null && !Array.isArray(value);
 }

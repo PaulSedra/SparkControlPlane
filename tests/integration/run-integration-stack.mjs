@@ -22,9 +22,15 @@ const supportedSparkImageDigests = new Map([
     ['4.1.3', '7cdb42ed55b5e02c279e838e38da3336dae74dca6aef07defae93f3c197d8ed6'],
     ['4.2.0', '786b96ed0058a0f1411475b218105f556ae4dabb2849c8dd23f4a701e94dd2ca'],
 ]);
+const supportedJavaRuntimeImages = new Map([
+    ['17', 'eclipse-temurin:17-jre-jammy@sha256:0317658d1807130c514140818811c25af9ab92145d33b193617e86d93aeed6ed'],
+    ['21', 'eclipse-temurin:21-jre-jammy@sha256:8a0ec3edf84a9b17bc3b71c1e4885d4de0d13e001bf1f6341589d566ca4a9c8e'],
+    ['25', 'eclipse-temurin:25-jre-jammy@sha256:3c7f19e9a038537ca55a02e6d2e12db800ba5a3551ee5bcbf6bfe0010982d481'],
+]);
 
-const { suite, sparkVersion } = parseOptions(process.argv.slice(2));
-const usesPolaris = suite !== 'postgres' && suite !== 'spark';
+const { javaVersion, suite, sparkVersion } = parseOptions(process.argv.slice(2));
+const usesPolaris = suite === 'polaris';
+const catalogBackend = usesPolaris ? 'polaris' : 'spark';
 const docker = resolveDockerCli();
 const runId = `${process.pid}-${Date.now()}`;
 const projectName = `spark-control-plane-integration-${runId}`.toLowerCase();
@@ -32,8 +38,8 @@ const networkName = `${projectName}-network`;
 const controlPlaneImage = `spark-control-plane:integration-${runId}`;
 const sparkImage = `spark-control-plane:spark-integration-${runId}`;
 const credentials = createCredentials();
-const integrationCatalogName = suite === 'spark' ? 'spark_catalog' : credentials.catalog;
-const integrationNamespace = suite === 'spark' ? 'default' : credentials.namespace;
+const integrationCatalogName = usesPolaris ? credentials.catalog : 'spark_catalog';
+const integrationNamespace = usesPolaris ? credentials.namespace : 'default';
 const ports = await allocatePorts();
 const fixture = await createIntegrationFixture(runId);
 const composeEnvironment = createComposeEnvironment();
@@ -45,6 +51,11 @@ let phase = 'initializing';
 let exitCode = 0;
 
 try {
+    if (suite === 'all') {
+        phase = 'running Polaris integration with its compatible Spark runtime';
+        runNode(['tests/integration/run-integration-stack.mjs', '--suite', 'polaris']);
+    }
+
     phase = 'validating Docker and Compose configuration';
     runDocker(['version'], { allowFailure: false });
     runCompose(['config', '--quiet']);
@@ -63,14 +74,17 @@ try {
             await seedPolaris();
         }
 
-        phase = 'starting Spark Connect';
-        await composeUp(['spark-connect'], { build: true });
-        await waitForHealthy('spark-connect', 240_000);
-        await seedSparkTable();
+        phase = 'starting Spark Standalone master and worker';
+        await composeUp(['spark-master', 'spark-worker'], { build: true });
+        await waitForHealthy('spark-master', 120_000);
+        await waitForHealthy('spark-worker', 120_000);
+        if (suite !== 'upgrade') {
+            phase = 'seeding the Spark catalog';
+            await seedSparkTable();
+        }
     }
 
     if (suite === 'all' || suite === 'polaris' || suite === 'spark') {
-        // Keep Spark Connect's seeded `/tmp` warehouse in its existing container.
         phase = 'building the control-plane target';
         composeBuild();
 
@@ -83,9 +97,7 @@ try {
         await composeBuild();
     }
 
-    phase = suite === 'spark'
-        ? `running Spark ${sparkVersion} integration suite`
-        : `running ${suite} integration suite`;
+    phase = `running ${suite} integration suite with Spark ${sparkVersion} and Java ${javaVersion}`;
     await runSuite();
 } catch (error) {
     exitCode = 1;
@@ -138,7 +150,6 @@ async function runSuite() {
         managedTestContext,
         postgresTestEnvironment,
     );
-    await runManagedTests(['tests/integration/polaris/*.test.ts'], managedTestContext);
     await runManagedTests(['tests/integration/spark/liveSpark.test.ts'], managedTestContext);
     runContainerSuite();
 }
@@ -152,7 +163,8 @@ function runContainerSuite() {
         '--pipeline-name', fixture.pipelineName,
         '--container-postgres-host', 'postgres',
         '--container-postgres-port', '5432',
-        '--container-spark-connect-url', 'sc://spark-connect:15002',
+        '--spark-properties-path', fixture.sparkPropertiesPath,
+        '--spark-data-volume', `${projectName}_spark-shared-data`,
         '--skip-build',
     ], testEnvironment);
 }
@@ -165,7 +177,7 @@ function runUpgradeSuite() {
         '--pipeline-path', fixture.root,
         '--container-postgres-host', 'postgres',
         '--container-postgres-port', '5432',
-        '--container-spark-connect-url', 'sc://spark-connect:15002',
+        '--spark-properties-path', fixture.sparkPropertiesPath,
     ], testEnvironment);
 }
 
@@ -173,13 +185,16 @@ function createComposeEnvironment() {
     return {
         ...runtimeEnvironment(),
         AISTOR_WEBHOOK_TOKEN: credentials.webhookToken,
-        CATALOG_BACKEND: suite === 'spark' ? 'spark' : 'polaris',
+        CATALOG_BACKEND: catalogBackend,
         CONTROL_PLANE_HOST_PORT: String(ports.controlPlane),
         INTEGRATION_CONTROL_PLANE_IMAGE: controlPlaneImage,
+        INTEGRATION_JAVA_RUNTIME_IMAGE: supportedJavaRuntimeImages.get(javaVersion),
         INTEGRATION_NETWORK_NAME: networkName,
         INTEGRATION_PIPELINES_PATH: fixture.root,
+        INTEGRATION_SPARK_VERSION: sparkVersion,
         INTEGRATION_SPARK_BASE_IMAGE: `apache/spark:${sparkVersion}-python3@sha256:${supportedSparkImageDigests.get(sparkVersion)}`,
         INTEGRATION_SPARK_IMAGE: sparkImage,
+        INTEGRATION_SPARK_PROPERTIES_PATH: fixture.sparkPropertiesPath,
         POLARIS_CATALOG_NAME: credentials.catalog,
         POLARIS_CLIENT_ID: credentials.clientId,
         POLARIS_CLIENT_SECRET: credentials.clientSecret,
@@ -191,7 +206,6 @@ function createComposeEnvironment() {
         POSTGRES_HOST_PORT: String(ports.postgres),
         POSTGRES_PASSWORD: credentials.databasePassword,
         POSTGRES_USER: 'control_plane_test',
-        SPARK_CONNECT_HOST_PORT: String(ports.sparkConnect),
     };
 }
 
@@ -199,7 +213,7 @@ function createTestEnvironment() {
     return {
         ...runtimeEnvironment(),
         AISTOR_WEBHOOK_TOKEN: credentials.webhookToken,
-        CATALOG_BACKEND: suite === 'spark' ? 'spark' : 'polaris',
+        CATALOG_BACKEND: catalogBackend,
         PIPELINES_DIR: fixture.root,
         POSTGRES_DATABASE: 'control_plane',
         POSTGRES_HOST: '127.0.0.1',
@@ -208,7 +222,7 @@ function createTestEnvironment() {
         POSTGRES_SCHEMA: 'spark_control_plane',
         POSTGRES_SSLMODE: 'disable',
         POSTGRES_USER: 'control_plane_test',
-        SPARK_CONNECT_URL: `sc://127.0.0.1:${ports.sparkConnect}`,
+        SPARK_MASTER_URL: 'spark://spark-master:7077',
         SPARK_HISTORY_URL: '',
     };
 }
@@ -217,8 +231,6 @@ function createManagedTestContext() {
     return {
         catalogName: integrationCatalogName,
         controlPlaneBaseUrl: `http://127.0.0.1:${ports.controlPlane}`,
-        demoPipelineName: fixture.demoPipelineName,
-        expectedDemoNodeName: 'spark_catalog.default.demo_orders',
         expectedNodeName: `${integrationCatalogName}.${integrationNamespace}.pipeline_output`,
         namespace: integrationNamespace,
         pipelineName: fixture.pipelineName,
@@ -233,6 +245,7 @@ async function seedPolaris() {
         ...testEnvironment,
         POLARIS_BASE_URL: `http://127.0.0.1:${ports.polaris}`,
         POLARIS_CATALOG_NAME: credentials.catalog,
+        POLARIS_CATALOG_LOCATION: 'file:///spark-shared/polaris',
         POLARIS_CLIENT_ID: credentials.clientId,
         POLARIS_CLIENT_SECRET: credentials.clientSecret,
         POLARIS_NAMESPACE: credentials.namespace,
@@ -246,11 +259,16 @@ async function seedSparkTable() {
         '--no-TTY',
         '--env', `INTEGRATION_CATALOG_NAME=${integrationCatalogName}`,
         '--env', `INTEGRATION_NAMESPACE=${integrationNamespace}`,
-        '--env', `INTEGRATION_TABLE_PROVIDER=${suite === 'spark' ? 'parquet' : 'iceberg'}`,
+        '--env', `INTEGRATION_TABLE_PROVIDER=${usesPolaris ? 'iceberg' : 'parquet'}`,
         '--env', `INTEGRATION_TABLE_NAME=${credentials.table}`,
-        '--env', 'SPARK_CONNECT_URL=sc://spark-connect:15002',
-        'spark-connect',
-        'python3',
+        'spark-worker',
+        '/opt/spark/bin/spark-submit',
+        '--master', 'spark://spark-master:7077',
+        '--deploy-mode', 'client',
+        '--conf', `spark.app.name=spark-control-plane-integration-seed-${runId}`,
+        '--conf', 'spark.driver.host=spark-worker',
+        '--conf', 'spark.driver.bindAddress=0.0.0.0',
+        '--properties-file', '/opt/integration/spark-defaults.conf',
         '/opt/integration/seed-integration-catalog.py',
     ]);
 }
@@ -438,7 +456,7 @@ function executeCapture(command, args, options = {}) {
 
 function printDiagnostics() {
     const result = runComposeCapture(
-        ['logs', '--no-color', '--tail', '200', 'postgres', 'polaris-bootstrap', 'polaris', 'spark-connect', 'control-plane'],
+        ['logs', '--no-color', '--tail', '200', 'postgres', 'polaris-bootstrap', 'polaris', 'spark-master', 'spark-worker', 'control-plane'],
         { allowFailure: true },
     );
     const output = redact(`${result.stdout}\n${result.stderr}`).trim();
@@ -471,6 +489,7 @@ async function cleanupFixture() {
 async function createIntegrationFixture(identifier) {
     await fs.mkdir(temporaryParent, { recursive: true });
     const root = await fs.mkdtemp(path.join(temporaryParent, 'integration-stack-'));
+    const sparkPropertiesPath = path.join(root, 'spark-defaults.conf');
     const pipelineRoot = path.join(root, 'pipelines', 'integration');
     const pipelineName = `Managed Integration Pipeline ${identifier}`;
     await fs.mkdir(path.join(pipelineRoot, 'resources'), { recursive: true });
@@ -479,7 +498,7 @@ async function createIntegrationFixture(identifier) {
         path.join(pipelineRoot, 'resources', 'integration.pipeline.yaml'),
         [
             `name: ${pipelineName}`,
-            'storage: file:///tmp/spark-control-plane-integration-checkpoints',
+            'storage: file:///spark-shared/checkpoints/integration',
             `catalog: ${integrationCatalogName}`,
             `database: ${integrationNamespace}`,
             'libraries:',
@@ -495,41 +514,40 @@ async function createIntegrationFixture(identifier) {
         'utf8',
     );
 
-    const demoPipelineName = suite === 'spark'
-        ? `Default Spark Catalog Demo ${identifier}`
-        : undefined;
-    if (demoPipelineName != null) {
-        const demoPipelineRoot = path.join(root, 'pipelines', 'default-catalog-demo');
-        await fs.mkdir(path.join(demoPipelineRoot, 'resources'), { recursive: true });
-        await fs.mkdir(path.join(demoPipelineRoot, 'sql'), { recursive: true });
-        await fs.writeFile(
-            path.join(demoPipelineRoot, 'resources', 'demo.pipeline.yaml'),
-            [
-                `name: ${demoPipelineName}`,
-                'storage: file:///tmp/spark-control-plane-integration-default-catalog-checkpoints',
-                'catalog: spark_catalog',
-                'database: default',
-                'libraries:',
-                '  - glob:',
-                '      include: ../sql/**',
-                '',
-            ].join('\n'),
-            'utf8',
-        );
-        await fs.writeFile(
-            path.join(demoPipelineRoot, 'sql', 'demo.sql'),
-            [
-                'CREATE MATERIALIZED VIEW demo_orders AS',
-                'SELECT * FROM VALUES',
-                "    (1, 'Ada', 125.50),",
-                "    (2, 'Grace', 89.00)",
-                'AS orders(order_id, customer, amount);',
-                '',
-            ].join('\n'),
-            'utf8',
-        );
+    await fs.writeFile(sparkPropertiesPath, integrationSparkProperties(), {
+        encoding: 'utf8',
+        // The private fixture directory protects credentials on the host.
+        // Spark runs as a different UID and reads this file via a bind mount.
+        mode: 0o644,
+    });
+    return { pipelineName, root, sparkPropertiesPath };
+}
+
+function integrationSparkProperties() {
+    if (!usesPolaris) {
+        return [
+            'spark.sql.catalogImplementation hive',
+            'spark.sql.defaultCatalog spark_catalog',
+            'spark.sql.warehouse.dir file:///spark-shared/warehouse',
+            'spark.hadoop.javax.jdo.option.ConnectionURL jdbc:derby:;databaseName=/spark-shared/metastore_db;create=true',
+            '',
+        ].join('\n');
     }
-    return { demoPipelineName, pipelineName, root };
+    return [
+        'spark.jars.ivy /tmp/.ivy2.5.2',
+        'spark.jars.packages org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0',
+        'spark.sql.extensions org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions',
+        `spark.sql.catalog.${credentials.catalog} org.apache.iceberg.spark.SparkCatalog`,
+        `spark.sql.catalog.${credentials.catalog}.type rest`,
+        `spark.sql.catalog.${credentials.catalog}.warehouse ${credentials.catalog}`,
+        `spark.sql.catalog.${credentials.catalog}.uri http://polaris:8181/api/catalog`,
+        `spark.sql.catalog.${credentials.catalog}.credential ${credentials.clientId}:${credentials.clientSecret}`,
+        `spark.sql.catalog.${credentials.catalog}.scope PRINCIPAL_ROLE:ALL`,
+        `spark.sql.catalog.${credentials.catalog}.header.X-Iceberg-Access-Delegation vended-credentials`,
+        `spark.sql.defaultCatalog ${credentials.catalog}`,
+        'spark.sql.warehouse.dir file:///spark-shared/warehouse',
+        '',
+    ].join('\n');
 }
 
 function createCredentials() {
@@ -546,13 +564,12 @@ function createCredentials() {
 }
 
 async function allocatePorts() {
-    const [controlPlane, postgres, polaris, sparkConnect] = await Promise.all([
-        availablePort(),
+    const [controlPlane, postgres, polaris] = await Promise.all([
         availablePort(),
         availablePort(),
         availablePort(),
     ]);
-    return { controlPlane, polaris, postgres, sparkConnect };
+    return { controlPlane, polaris, postgres };
 }
 
 async function availablePort() {
@@ -616,7 +633,7 @@ function parseOptions(args) {
 
     const sparkVersionIndex = args.indexOf('--spark-version');
     const sparkVersion = sparkVersionIndex === -1
-        ? '4.1.2'
+        ? (suite === 'polaris' ? '4.1.3' : '4.2.0')
         : args[sparkVersionIndex + 1]?.trim();
     if (sparkVersion == null || !supportedSparkImageDigests.has(sparkVersion)) {
         throw new Error(`--spark-version must be one of: ${[...supportedSparkImageDigests.keys()].join(', ')}.`);
@@ -624,7 +641,19 @@ function parseOptions(args) {
     if (sparkVersionIndex !== -1 && !['all', 'polaris', 'spark'].includes(suite)) {
         throw new Error('--spark-version can only be used with all, polaris, or spark suites.');
     }
-    return { sparkVersion, suite };
+
+    const javaVersionIndex = args.indexOf('--java-version');
+    const javaVersion = javaVersionIndex === -1
+        ? (sparkVersion === '4.2.0' ? '21' : '17')
+        : args[javaVersionIndex + 1]?.trim();
+    if (javaVersion == null || !supportedJavaRuntimeImages.has(javaVersion)) {
+        throw new Error(`--java-version must be one of: ${[...supportedJavaRuntimeImages.keys()].join(', ')}.`);
+    }
+    if (javaVersionIndex !== -1 && !['all', 'polaris', 'spark'].includes(suite)) {
+        throw new Error('--java-version can only be used with all, polaris, or spark suites.');
+    }
+
+    return { javaVersion, sparkVersion, suite };
 }
 
 function redact(value) {

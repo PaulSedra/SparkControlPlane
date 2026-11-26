@@ -1,5 +1,10 @@
 /** @fileoverview Loads the queue coordinator's runtime settings. */
 
+import {
+    boundedIntegerValue,
+    boundedPositiveInteger,
+} from '../../config/configValues.ts';
+
 /** Effective lease, concurrency, and recovery settings for one worker process. */
 export interface RunCoordinatorConfig {
     leaseMilliseconds: number;
@@ -16,50 +21,56 @@ export interface RunCoordinatorConfig {
  * with a one-second minimum. Concurrency defaults to one, and recovery batch
  * size defaults to 100 with a maximum of 1,000.
  */
-export function loadRunCoordinatorConfig(): RunCoordinatorConfig {
-    const leaseMilliseconds = configuredLeaseMilliseconds();
+export function loadRunCoordinatorConfig(
+    environment: NodeJS.ProcessEnv = process.env,
+): RunCoordinatorConfig {
+    const leaseMilliseconds = configuredLeaseMilliseconds(environment);
     return {
         leaseMilliseconds,
-        maxConcurrentRuns: configuredRunConcurrency(),
-        recoveryBatchSize: configuredRecoveryBatchSize(),
-        recoveryIntervalMilliseconds: configuredRecoveryIntervalMilliseconds(leaseMilliseconds),
+        maxConcurrentRuns: configuredRunConcurrency(environment),
+        recoveryBatchSize: configuredRecoveryBatchSize(environment),
+        recoveryIntervalMilliseconds: configuredRecoveryIntervalMilliseconds(
+            leaseMilliseconds,
+            environment,
+        ),
     };
 }
 
-function configuredLeaseMilliseconds(): number {
+function configuredLeaseMilliseconds(environment: NodeJS.ProcessEnv): number {
     const configured = Number.parseInt(
-        process.env.PIPELINE_RUN_LEASE_SECONDS?.trim() ?? '',
+        environment.PIPELINE_RUN_LEASE_SECONDS?.trim() ?? '',
         10,
     );
-    if (!Number.isFinite(configured)) {
-        return 30_000;
-    }
-    return Math.min(86_400, Math.max(1, configured)) * 1000;
+    return boundedIntegerValue(configured, 30_000, 1, 86_400, 1_000);
 }
 
-function configuredRunConcurrency(): number {
-    const configured = Number(process.env.PIPELINE_RUN_CONCURRENCY?.trim() ?? '');
-    return Number.isSafeInteger(configured) && configured > 0 ? configured : 1;
+function configuredRunConcurrency(environment: NodeJS.ProcessEnv): number {
+    const configured = Number(environment.PIPELINE_RUN_CONCURRENCY?.trim() ?? '');
+    return boundedPositiveInteger(configured, 1, Number.MAX_SAFE_INTEGER);
 }
 
-function configuredRecoveryIntervalMilliseconds(leaseMilliseconds: number): number {
+function configuredRecoveryIntervalMilliseconds(
+    leaseMilliseconds: number,
+    environment: NodeJS.ProcessEnv,
+): number {
     const configured = Number.parseInt(
-        process.env.PIPELINE_RUN_RECOVERY_INTERVAL_SECONDS?.trim() ?? '',
+        environment.PIPELINE_RUN_RECOVERY_INTERVAL_SECONDS?.trim() ?? '',
         10,
     );
-    if (!Number.isFinite(configured)) {
-        return Math.max(1_000, Math.floor(leaseMilliseconds / 3));
-    }
-    return Math.min(86_400, Math.max(1, configured)) * 1000;
+    const defaultIntervalMilliseconds = Math.max(1_000, Math.floor(leaseMilliseconds / 3));
+    return boundedIntegerValue(
+        configured,
+        defaultIntervalMilliseconds,
+        1,
+        86_400,
+        1_000,
+    );
 }
 
-function configuredRecoveryBatchSize(): number {
+function configuredRecoveryBatchSize(environment: NodeJS.ProcessEnv): number {
     const configured = Number.parseInt(
-        process.env.PIPELINE_RUN_RECOVERY_BATCH_SIZE?.trim() ?? '',
+        environment.PIPELINE_RUN_RECOVERY_BATCH_SIZE?.trim() ?? '',
         10,
     );
-    if (!Number.isFinite(configured)) {
-        return 100;
-    }
-    return Math.min(1_000, Math.max(1, configured));
+    return boundedIntegerValue(configured, 100, 1, 1_000);
 }

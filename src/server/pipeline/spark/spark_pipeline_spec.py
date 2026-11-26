@@ -9,9 +9,9 @@ from pyspark.pipelines.cli import PipelineSpec, unpack_pipeline_spec
 
 
 def load_pipeline_spec_for_control_plane(spec_path: Path) -> PipelineSpec:
-    """Load and validate a spec after stripping SCP-only metadata sections."""
-    with spec_path.open("r") as file:
-        spec_data = yaml.safe_load(file)
+    """Strip SCP-only fields before handing the definition to Spark's SDP runtime."""
+    with spec_path.open("r", encoding="utf-8") as source:
+        spec_data = yaml.safe_load(source)
     if isinstance(spec_data, dict):
         spec_data = {
             key: value for key, value in spec_data.items()

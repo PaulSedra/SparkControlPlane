@@ -2,21 +2,23 @@
 
 The pipeline module discovers mounted pipeline projects, builds registry
 graphs, coordinates durable run requests, and adapts Spark CLI and preview
-processes. PostgreSQL owns pipeline identity and run state; Spark Connect
-executes workloads and provides bounded data previews.
+processes. PostgreSQL owns pipeline identity and run state; each pipeline run
+starts one Spark Connect server application on the configured Spark Standalone
+master. The official Spark Pipelines CLI connects to that per-run server.
+Catalog and preview requests use short-lived applications on the same master.
 
 ## Module structure
 
-| Area                          | Responsibility                                                                             |
-|-------------------------------|--------------------------------------------------------------------------------------------|
-| `pipelineRegistryService.ts`  | Composition root for registry services                                                     |
-| `pipelineReadinessService.ts` | Discovery readiness, cached operational snapshots, refresh timer, and queue metrics        |
-| `triggerRegistryService.ts`   | Registry-facing trigger CRUD, ingestion, schedule status, and queries                      |
+| Area                          | Responsibility                                                                                       |
+|-------------------------------|------------------------------------------------------------------------------------------------------|
+| `pipelineRegistryService.ts`  | Composition root for registry services                                                               |
+| `pipelineReadinessService.ts` | Discovery readiness, cached operational snapshots, refresh timer, and queue metrics                  |
+| `triggerRegistryService.ts`   | Registry-facing trigger CRUD, ingestion, schedule status, and queries                                |
 | `discovery/`                  | Explicit source refresh, source resolution, YAML parsing, lineage, validation, and registry identity |
-| `execution/`                  | Run policy, queue coordination, per-run execution, and successful-run handoff              |
-| `spark/`                      | PySpark manifest, official CLI, local supervisor, logs, and dataset previews               |
-| `pipelineNodeService.ts`      | Declared source reads and selected-node previews                                           |
-| `mapWithConcurrency.ts`       | Ordered bounded mapping used by pipeline discovery, parsing, and snapshot staging          |
+| `execution/`                  | Run policy, queue coordination, per-run execution, and successful-run handoff                        |
+| `spark/`                      | PySpark manifest, official CLI, local supervisor, logs, and dataset previews                         |
+| `pipelineNodeService.ts`      | Declared source reads and selected-node previews                                                     |
+| `mapWithConcurrency.ts`       | Ordered bounded mapping used by pipeline discovery, parsing, and snapshot staging                    |
 
 Within `execution/`, `pipelineRuntime.ts` owns pipeline-root path handling,
 `runSubmission.ts` resolves successor pipelines, and
@@ -116,16 +118,21 @@ coordinator uses PostgreSQL leases, recovery, and a per-process
 
 Before a CLI submission, execution loads the queued source version from
 PostgreSQL, stages a run-specific copy under
-`SPARK_CLI_STATE_DIRECTORY/runs/<runId>/source`, and verifies it against the
-queued source hash. The official `spark-pipelines` CLI receives the copied
-specification and configured `SPARK_CONNECT_URL`. The installed
-`pyspark[pipelines]==4.2.0` runtime provides the CLI. Spark Connect is deployed
-separately; features requiring server-side Spark 4.2 use a 4.2 Spark Connect
-server. Full refresh uses `--full-refresh-all`; selected nodes and repairs
-resolve graph selections to qualified output datasets before using `--refresh`
-or `--full-refresh`. A selected flow expands through outgoing edges and shared
-datasets are deduplicated. The local supervisor owns one CLI process per run ID
-and stores process state and output in the same container.
+`PIPELINE_RUN_STATE_DIRECTORY/runs/<runId>/source`, and verifies it against the
+queued source hash. The local supervisor packages that source snapshot and the
+control-plane spec adapter for the Connect server's executors. Spark 4.2's
+`spark-pipelines` CLI is Connect-only, so the supervisor starts a dedicated
+Connect server with `spark-submit --master <SPARK_MASTER_URL>` for each run.
+The client connects to that server over loopback; the Standalone master sees
+one application for the entire pipeline graph and allocates its executors.
+`SPARK_DRIVER_HOST` must be reachable from the workers. The installed
+`pyspark[pipelines]==4.2.0` runtime provides both commands. Each run is a finite
+pipeline update and its Spark application ends when the update completes. Full
+refresh uses `--full-refresh-all`; selected nodes and repairs resolve graph
+selections to qualified output datasets before using `--refresh` or
+`--full-refresh`. A selected flow expands through outgoing edges and shared
+datasets are deduplicated. The local supervisor owns the CLI and Connect server
+processes per run ID and stores process state and output in the same container.
 
 A pipeline may set the top-level YAML field `timeout_seconds` to an integer
 from 1 through 604800. The local supervisor enforces that deadline for the
@@ -165,22 +172,42 @@ run ID for recovery across dispatcher restarts.
 
 ## Preview and history behavior
 
-Spark Connect previews quote multipart identifiers and return at most 100
-rows. `SPARK_HISTORY_URL` configures the historical Spark application proxy; it
-does not provide pipeline run records or replace `SPARK_CONNECT_URL`.
-`spark/sparkNodePreview.ts` owns execution of selected-node previews.
+Spark previews quote multipart identifiers and return at most 100 rows. Each
+Spark-backed catalog query or selected-node preview starts one bounded `spark-submit`
+application using `SPARK_MASTER_URL`, `SPARK_DRIVER_HOST`, and the configured
+Spark properties file. `SPARK_HISTORY_URL` configures the historical Spark
+application proxy; it does not provide pipeline run records.
+`sparkStandaloneQueryService.ts` invokes `spark_catalog_query.py` for catalog
+and selected-node preview requests.
 
 ## Adapter contracts
 
-| Adapter                        | Input and runtime                                                      | Output and purpose                                                                          |
-|--------------------------------|------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
-| `spark_pipeline_spec.py`       | PySpark spec path, installed PyYAML and PySpark                        | Removes control-plane-owned `on_success`, `timeout_seconds`, and `triggers` before delegating validation and decoding to PySpark |
-| `spark_pipeline_cli.py`        | Spark Pipelines CLI arguments and installed PySpark                    | Installs trigger handling on the official CLI module and invokes its entry point            |
-| `spark_pipeline_manifest.py`   | Spec path, repository `.venv`, local PySpark, no Spark session         | One JSON document describing registered Python outputs and flows                            |
-| `spark_connect_sample_data.py` | Qualified dataset and optional limit, configured Spark Connect session | One JSON document with columns and rows, capped at 100 rows                                 |
-| `sparkCliProcess.ts`           | Spec, mode, Connect URL, and selected targets                          | Builds the official CLI invocation and resumes monitoring through the local supervisor      |
-| `spark_cli_supervisor.py`      | CLI arguments, run ID, state directory, and working directory          | Owns the local CLI child and persists atomic state, stdout, and stderr                      |
+| Adapter                      | Input and runtime                                              | Output and purpose                                                                                                               |
+|------------------------------|----------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------|
+| `spark_pipeline_spec.py`     | PySpark spec path, installed PyYAML and PySpark                | Removes control-plane-owned `on_success`, `timeout_seconds`, and `triggers` before delegating validation and decoding to PySpark |
+| `spark_pipeline_cli.py`      | Spark Pipelines CLI arguments and installed PySpark            | Installs trigger handling on the official CLI module and invokes its entry point                                                 |
+| `spark_pipeline_manifest.py` | Spec path, repository `.venv`, local PySpark, no Spark session | One JSON document describing registered Python outputs and flows                                                                 |
+| `spark_catalog_query.py`     | Bounded JSON request inside a `spark-submit` application       | Catalog operations and bounded samples returned as JSON                                                                          |
+| `sparkCliProcess.ts`         | Spec, run identity, and selected targets                       | Submits once and owns the shared execution context                                                                               |
+| `sparkCliMonitor.ts`         | Execution context                                              | Polls durable status, retries cancellation, and drains logs                                                                      |
+| `sparkCliProtocol.ts`        | CLI configuration and JSON messages                            | Builds commands and validates supervisor acknowledgments and snapshots                                                           |
+| `spark_cli_supervisor.py`    | Start payload and run actions                                  | Launches the Connect server and CLI, and cleans up their process groups                                                          |
+| `spark_cli_state.py`         | Run record and log cursors                                     | Locks state changes, rechecks orphaned runs, and assembles bounded snapshots                                                     |
+
+Submission requires the verified source file list from the staged deployment.
+The supervisor archives the spec and the declared SQL and Python library files.
+Declare any local Python modules imported by the pipeline in the spec's library
+includes. The supervisor rejects symlinks. The run record keeps the deployment `sourceHash` and the
+SHA-256 digest of the generated archive in `sourceArchiveSha256`. The default
+CLI uses Spark's `spark-class` launcher with the bundled spec adapter. A
+custom `SPARK_CLI_BINARY` is executed directly with the Connect client flags.
+Quiet runs with a known client PID are polled at intervals up to four seconds.
+Detach leaves the exit code unset while the independently supervised run
+continues. A submission finishes recording the supervisor before the worker
+releases its lease. A cancellation helper can finish recording its request
+after the monitor detaches. Orphan cleanup uses a separate per-run lock so
+cancellation and other state writes can continue during cleanup.
 
 The manifest helper has a configurable timeout and output limit. The supervisor
-stores logs and state under `SPARK_CLI_STATE_DIRECTORY`; source snapshots
+stores logs and state under `PIPELINE_RUN_STATE_DIRECTORY`; source snapshots
 remain available while the supervisor may still use them.

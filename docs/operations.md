@@ -6,11 +6,14 @@ pipeline files and Spark-managed storage remain external.
 
 ## Startup and readiness
 
-Inject PostgreSQL and Spark settings directly into the process environment:
+Inject PostgreSQL and Spark Standalone settings directly into the process environment:
 
 ```powershell
 $env:PIPELINES_DIR = 'C:\path\to\pipelines'
-$env:SPARK_CONNECT_URL = 'sc://spark-connect.example:15002'
+$env:SPARK_MASTER_URL = 'spark://spark-master.example:7077'
+$env:SPARK_DRIVER_HOST = 'spark-control-plane.example'
+$env:SPARK_EXECUTOR_PYTHON = 'python3'
+$env:AISTOR_WEBHOOK_TOKEN = '<provided by the runtime>'
 $env:POSTGRES_HOST = 'postgres.example'
 $env:POSTGRES_PORT = '5432'
 $env:POSTGRES_DATABASE = 'spark_control_plane'
@@ -22,6 +25,19 @@ $env:POLARIS_POSTGRES_DATABASE = 'polaris'
 $env:POLARIS_POSTGRES_SCHEMA = 'polaris_schema'
 npm run start:server
 ```
+
+Each pipeline run starts a temporary Spark Connect server with `spark-submit`
+against the existing Standalone master, then runs `spark-pipelines` as a client
+connected to that server over loopback. The Connect server is the one Spark
+application for the complete pipeline graph; the Standalone master allocates
+its executors. The client has no separate Spark application, and no shared
+Connect URL is configured. Each Spark-backed catalog or preview query starts a
+short-lived `spark-submit` application on the same master. Workers must
+be able to connect to `SPARK_DRIVER_HOST` and the Spark driver and block manager
+ports. With Docker, workers need a route to the container and
+these Spark ports; publishing the HTTP API port alone is not sufficient. Pin
+the ports through `SPARK_CLI_PROPERTIES_FILE` when the network requires a
+fixed range. The pipeline update is finite.
 
 The application does not load dotenv files or read credential/certificate
 files. Certificates, when required, are direct PEM-valued environment
@@ -49,11 +65,12 @@ count, and stuck-run count.
 
 ## Queue, concurrency, and resources
 
-Runs for a pipeline are FIFO and only one run may be `SUBMITTING` or `RUNNING`
-at a time. Runs for different pipelines are claimed and launched concurrently;
-the Control Plane has no global run-concurrency limit, so Spark handles cluster
-resource scheduling. The legacy `allowOverlap` setting is accepted for
-configuration compatibility but ignored; all runs are serialized per pipeline.
+Each worker claims eligible runs in FIFO order up to its
+`PIPELINE_RUN_CONCURRENCY` limit (default 1). Increasing the limit allows
+concurrent runs across pipelines. By default, a run waits while another run
+for its pipeline is active. Set `allowOverlap: true` for that pipeline in
+`PIPELINE_RUN_POLICIES` to allow overlap within the worker limit. Spark
+schedules executor resources for admitted runs.
 `PIPELINE_RUN_LEASE_SECONDS` defaults to 30 seconds and controls PostgreSQL
 worker ownership heartbeats. Expired leases are reconciled continuously; the
 interval defaults to one-third of the lease and can be overridden with
@@ -111,14 +128,14 @@ Starting recommendations for one control-plane instance are:
 |--------------------------|------------------------:|----------------------------------------------------------------------|
 | CPU                      |                  2 vCPU | Reserve one execution slot's orchestration overhead.                 |
 | Memory                   |                   2 GiB | The control plane does not own Spark executor memory.                |
-| Local process count      | One per active pipeline | Size the host for the number of pipelines that may run concurrently. |
+| Local process count      | Scales with active runs | Each active run can have a supervisor, a Connect server, and a CLI.  |
 | File descriptors/handles |                    1024 | Raise before increasing concurrency or concurrent monitoring calls.  |
 | Pipeline mount           |               Read-only | Discovery imports trusted Python definitions.                        |
 
 Measure queue age, active runs, completion counters, timeout/cancellation
 counters, Spark start failures, run duration, and queue wait duration from
-`/metrics`. Because there is no global admission cap, size and monitor Spark,
-PostgreSQL, host process, memory, and file-descriptor capacity explicitly.
+`/metrics`. Size Spark, PostgreSQL, host memory, and file-descriptor capacity
+for the combined worker limits.
 The metric catalog, process-local lifecycle, and exact Prometheus text format
 are documented in [`src/server/observability/README.md`](../src/server/observability/README.md).
 
@@ -126,30 +143,31 @@ are documented in [`src/server/observability/README.md`](../src/server/observabi
 
 `POST /api/v1/runs/{runId}/cancel` records queued cancellation transactionally
 or requests cancellation for an active run. The local supervisor receives the
-request and sends `SIGINT` to the official CLI process group. The CLI uses the
-configured `SPARK_CONNECT_URL` to communicate with Spark Connect. The process
-receives `SPARK_CONTROL_PLANE_RUN_ID` for log correlation.
+request and sends `SIGINT` to the Spark Connect server and pipeline client. The
+processes receive `SPARK_CONTROL_PLANE_RUN_ID` for log correlation. The
+Standalone master tracks the per-run server application and its executors; the
+server driver runs as a separate process in the Control Plane container.
 
 `SIGTERM` and `SIGINT` stop new submissions and drain local monitors for
 `CONTROL_PLANE_DRAIN_SECONDS`. A monitor detaches without canceling the CLI;
 the supervisor and CLI remain in SCP's existing container. If a replacement
 server process starts while that container remains alive, it reads the saved
 CLI state and resumes monitoring without another submission. A full SCP
-container restart kills both processes. A Docker restart keeps that container's
+container restart kills the local driver and supervisor, so the Standalone
+application stops or fails. A Docker restart keeps that container's
 writable layer, including `/app/run-state`; replacing the container does not
 keep that directory unless it is mounted or otherwise persisted. After the
 lease expires, SCP reads the last saved terminal state if one exists. If the
 CLI had still been active, or its local record is missing, SCP writes terminal
 status `UNKNOWN`, records the reason and any available output tail, and does
-not submit the pipeline again. Spark may or may not have continued the
-operation after the CLI was killed.
+not submit the pipeline again. Inspect the Standalone master UI for the
+application named `spark-control-plane-<runId>` before retrying an unknown run.
 
 Queued PostgreSQL rows remain available to the next healthy server process.
 An expired active row without a saved local CLI identity is failed as an
-abandoned run before execution. Rows left by the former Spark Connect worker
-without a local CLI record are marked `UNKNOWN` once their lease expires
-because the current CLI cannot inspect those operations. Each receives one
-matching `UNKNOWN` diagnostic event and `RUN_OUTCOME_UNKNOWN` audit row.
+abandoned run before execution. Rows without a recoverable local CLI record are
+marked `UNKNOWN` after lease expiry. Each receives one matching `UNKNOWN`
+diagnostic event and `RUN_OUTCOME_UNKNOWN` audit row.
 Investigate any nonzero `stuckRuns` before declaring readiness. During a
 mixed-version rollout, drain old workers before starting workers that depend
 on the new lifecycle-diagnostic columns.

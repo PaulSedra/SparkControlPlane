@@ -37,7 +37,6 @@ interface ActiveRunHandle extends RunExecutionHandle {
  * remaining monitors before releasing their leases.
  */
 export function createRunCoordinator(
-    sparkConnectUrl: string | undefined,
     persistence: ControlPlanePersistence,
     runExecutor: LocalCliRunExecutor = runSparkProcess,
 ): RunCoordinator {
@@ -167,7 +166,6 @@ export function createRunCoordinator(
                 persistence,
                 run: claimed.run,
                 runExecutor,
-                sparkConnectUrl,
             });
             const active: ActiveRunHandle = {
                 ...execution,

@@ -3,8 +3,10 @@
 The server is the backend for pipeline discovery, deployment, run scheduling,
 trigger delivery, catalog browsing, and run history. The production process is
 a standalone Node HTTP server. It serves the built React application and the
-versioned API, while PostgreSQL stores control-plane state and Spark Connect
-executes pipeline work and bounded data previews.
+versioned API, while PostgreSQL stores control-plane state and an existing
+Spark Standalone cluster executes pipeline work. The Control Plane submits one
+Spark application per pipeline run; catalog and bounded data preview queries
+submit short-lived Spark applications to the same master.
 
 ## Architecture
 
@@ -32,14 +34,16 @@ flowchart LR
         Registry["Pipeline registry service<br/>saved snapshots, deploy, runs"]
         Triggers["Trigger services<br/>events, schedules, delivery"]
         Worker["Run coordinator<br/>queue, leases, recovery"]
-        CLI["Local supervisor<br/>spark-pipelines CLI"]
+        CLI["spark-pipelines client-mode process<br/>submitter + driver"]
+        Query["spark-submit query process<br/>one driver per request"]
         Catalog["Catalog service"]
     end
 
     Pipelines["Pipelines source folder<br/>yaml definitions and source files"]
     PostgreSQL[("PostgreSQL<br/>control-plane state")]
     Polaris[("Polaris<br/>metadata database")]
-    Spark["Spark Connect"]
+    SparkMaster["Spark Standalone Master"]
+    Executors["Spark Standalone workers<br/>per-app executors"]
     Browser --> HTTP
     AIStor -->|" Bearer-authenticated event "| HTTP
     HTTP -->|" serves "| UI
@@ -53,12 +57,16 @@ flowchart LR
     Triggers -->|" submit through registry service "| Worker
     Worker -->|" claim, lease, recover "| PostgreSQL
     Worker -->|" start or inspect by run ID "| CLI
-    CLI -->|" official pipeline execution "| Spark
+    CLI -->|" one complete pipeline application per run "| SparkMaster
+    SparkMaster -->|" register app and allocate executors "| Executors
+    Executors -->|" run tasks and report to driver "| CLI
+    Catalog -->|" bounded catalog or preview request "| Query
+    Query -->|" submit short-lived application "| SparkMaster
+    Executors -->|" run query tasks and report to driver "| Query
     Catalog -->|" hierarchy and enrichment in Polaris mode "| Polaris
-    Catalog -->|" hierarchy, details, and samples in Spark mode "| Spark
-    class Browser,AIStor client
-    class HTTP,UI transport
-    class Worker,CLI execution
+    class Browser, AIStor client
+    class HTTP, UI transport
+    class Worker, CLI execution
     classDef client fill: #263341, stroke: #94a3b8, stroke-width: 2px
     classDef transport fill: #1e3a5f, stroke: #60a5fa, stroke-width: 2px
     classDef execution fill: #1e3a5f, stroke: #60a5fa, stroke-width: 2px
@@ -70,8 +78,16 @@ flowchart LR
     style PostgreSQL fill: #27455d, stroke: #31648c, stroke-width: 2px
     style Polaris fill: #03242d, stroke: #02757d, stroke-width: 2px
     style Catalog fill: #1e3a5f, stroke: #60a5fa, stroke-width: 2px
-    style Spark fill: #5a2818, stroke: #e25a1c, stroke-width: 2px
+    style SparkMaster fill: #5a2818, stroke: #e25a1c, stroke-width: 2px
+    style Executors fill: #5a2818, stroke: #e25a1c, stroke-width: 2px
 ```
+
+The `spark-pipelines` client-mode process is the driver for the whole pipeline
+run. It submits once to the Standalone master, which records the application
+and allocates its executors; the master does not launch this Python driver.
+Catalog and preview requests each launch a bounded `spark-submit` application
+through the same Standalone master. The master allocates executors for those
+short-lived query applications too.
 
 ### Runtime layers
 
@@ -87,8 +103,8 @@ flowchart LR
   persistence, the run coordinator, and trigger services. It owns pipeline
   registry operations, not the HTTP protocol.
 - `persistence/` implements the control-plane PostgreSQL contract. `catalog/`
-  selects Polaris metadata or Spark Connect as the hierarchy source; Spark
-  Connect supplies details and bounded samples in either mode.
+  selects Polaris metadata or Spark Standalone as the hierarchy source; Spark
+  Standalone supplies details and bounded samples in either mode.
 - `triggers/` owns event ingestion, scheduling, shared delivery, and
   dead-letter recovery. See [`triggers/README.md`](./triggers/README.md).
 - `observability/` exposes process-local Prometheus text metrics at `/metrics`.
@@ -156,9 +172,9 @@ traversal attempts return `404`; asset files use immutable caching while
    `QUEUED`. The coordinator claims work independently of the HTTP request,
    using PostgreSQL leases and the configured per-process concurrency limit.
 4. Before execution, the server creates a run-specific source snapshot and
-   verifies it against the queued source hash. The local supervisor starts the
-   official `spark-pipelines` CLI against `SPARK_CONNECT_URL` and keeps run
-   output and process state available by run ID.
+   verifies it against the queued source hash. The local supervisor packages
+   that snapshot and starts the official `spark-pipelines` CLI in Standalone
+   client mode. Its driver submits once for the complete pipeline graph.
 5. The server persists run and node projections, append-only events, and audit
    records. These persisted records are the source for run state and timing.
 
@@ -180,7 +196,7 @@ in [`docs/operations.md`](../../docs/operations.md) and the
 |---------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | PostgreSQL                | Pipeline UUIDs and source pointers; deployments; queued and active runs; idempotency; cancellation; worker leases; current run/node projections; run events; audit records; trigger definitions, events, delivery outcomes, and dead letters. |
 | Mounted pipeline projects | YAML, SQL, Python source, and project libraries. The control plane reads the mount; Spark executes the verified run snapshot.                                                                                                                 |
-| Spark Connect             | Pipeline execution and bounded previews of pipeline or catalog data. Spark-managed tables, storage, and checkpoints remain owned by Spark and pipeline definitions.                                                                           |
+| Spark Standalone          | Tracks one Spark application per pipeline run and allocates its executors. The Control Plane process hosts the client-mode driver.                                                                                                            |
 | Spark History Server      | Historical Spark application and execution details proxied through `/spark-api/*`. It does not own control-plane pipeline run records.                                                                                                        |
 | Polaris metadata database | Read-only catalog and schema discovery when `CATALOG_BACKEND=polaris`. It is not the run queue or pipeline registry.                                                                                                                          |
 
@@ -213,13 +229,13 @@ for the complete TLS and adapter contract):
 
 | Area             | Settings                                                                                                                                                                                     |
 |------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Required startup | `PIPELINES_DIR`, `SPARK_CONNECT_URL`, `AISTOR_WEBHOOK_TOKEN`, `POSTGRES_HOST`, `POSTGRES_DATABASE`, `POSTGRES_USER`, `POSTGRES_PASSWORD`                                                     |
+| Required startup | `PIPELINES_DIR`, `AISTOR_WEBHOOK_TOKEN`, `POSTGRES_HOST`, `POSTGRES_DATABASE`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `SPARK_MASTER_URL`, and worker-reachable `SPARK_DRIVER_HOST`            |
 | PostgreSQL       | `POSTGRES_PORT` (default `5432`), `POSTGRES_SCHEMA` (default `public`), `POSTGRES_SSLMODE` (default `require`), and direct PEM values for configured TLS verification or client certificates |
 | HTTP and assets  | `CONTROL_PLANE_HOST` (default `0.0.0.0`), `CONTROL_PLANE_PORT` (default `8080`), `CONTROL_PLANE_DRAIN_SECONDS` (default `30`), `CONTROL_PLANE_STATIC_DIR` (default `dist`)                   |
-| Spark            | `SPARK_CONNECT_URL` for execution and previews; optional `SPARK_HISTORY_URL` for the `/spark-api/*` history proxy                                                                            |
-| Catalog          | `CATALOG_BACKEND` (default `polaris`; `spark` reads catalog hierarchy and metadata through Spark Connect)                                                                                    |
+| Spark            | Required `SPARK_MASTER_URL` and worker-reachable `SPARK_DRIVER_HOST`; optional `SPARK_EXECUTOR_PYTHON` (default `python3`), `SPARK_CLI_PROPERTIES_FILE`, and `SPARK_HISTORY_URL`             |
+| Catalog          | `CATALOG_BACKEND` (default `polaris`; `spark` reads catalog hierarchy and metadata through Spark Standalone)                                                                                 |
 | Run worker       | `PIPELINE_RUN_CONCURRENCY` (default `1`) and optional `PIPELINE_RUN_POLICIES` admission JSON; timeouts use `timeout_seconds` in pipeline YAML                                                |
-| Adapters         | `PYTHON_EXECUTABLE`, `SPARK_CLI_*`, `PIPELINE_DISCOVERY_*`, and optional `POLARIS_POSTGRES_*` / `POLARIS_REALM` overrides                                                                    |
+| Adapters         | `PYTHON_EXECUTABLE`, `SPARK_CLI_BINARY`, `PIPELINE_DISCOVERY_*`, and optional `POLARIS_POSTGRES_*` / `POLARIS_REALM` overrides                                                               |
 
 File-based PostgreSQL credential and certificate settings are rejected.
 `POLARIS_POSTGRES_*` values can override the control-plane PostgreSQL
@@ -255,7 +271,7 @@ and suite boundaries.
 | Concern                                   | Entry points                                                                                                                                   |
 |-------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------|
 | Production HTTP composition and lifecycle | `runtime/standaloneServer.ts`, `runtime/requestHandler.ts`                                                                                     |
-| HTTP route contracts                      | `api/pipelineRegistryHttp.ts`, `api/routes/`                                                                                                   |
+| HTTP route contracts                      | `api/controlPlaneHttp.ts`, `api/routes/`                                                                                                       |
 | Registry, discovery, and run coordination | `pipeline/README.md`, `pipeline/pipelineRegistryService.ts`, `pipeline/discovery/pipelineDiscovery.ts`, `pipeline/execution/runCoordinator.ts` |
 | PostgreSQL control-plane state            | `persistence/postgresPersistence.ts`, `persistence/run/`, `persistence/migrations/`                                                            |
 | Trigger ingestion and delivery            | `triggers/triggerServices.ts`, `triggers/README.md`                                                                                            |

@@ -1,5 +1,5 @@
 /**
- * @fileoverview Shared transport boundary for pipeline registry HTTP routes.
+ * @fileoverview Shared transport boundary for control-plane API routes.
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -18,7 +18,7 @@ import {
 import { sendError, sendJson } from './http/response.ts';
 import type {
     NextFunction,
-    PipelineHttpDependencies,
+    ControlPlaneHttpDependencies,
     ControlPlaneHttpHandlerOptions,
 } from './httpTypes.ts';
 
@@ -43,8 +43,8 @@ export function createControlPlaneHttpHandler({
     pipelineService,
     catalogService,
     options = {},
-}: PipelineHttpDependencies) {
-    return async function pipelineHttpHandler(
+}: ControlPlaneHttpDependencies) {
+    return async function controlPlaneHttpHandler(
         request: IncomingMessage,
         response: ServerResponse,
         next?: NextFunction,

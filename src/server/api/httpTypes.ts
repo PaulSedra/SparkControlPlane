@@ -14,7 +14,7 @@ export interface ControlPlaneHttpHandlerOptions {
 }
 
 /** Already-constructed services and options used by the transport-only HTTP handler. */
-export interface PipelineHttpDependencies {
+export interface ControlPlaneHttpDependencies {
     catalogService: CatalogService;
     options?: ControlPlaneHttpHandlerOptions;
     pipelineService: PipelineRegistryService;

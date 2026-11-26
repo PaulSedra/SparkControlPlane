@@ -50,19 +50,20 @@ from the control plane's persisted PostgreSQL run records.
 
 The catalog page does not read pipeline manifests. `CATALOG_BACKEND` selects
 the hierarchy source: `polaris` (default) reads the read-only Polaris
-PostgreSQL persistence schema; `spark` reads the catalog directly through
-Spark Connect. Both modes use these lazy routes:
+PostgreSQL persistence schema; `spark` reads the catalog through bounded
+Spark applications submitted to the configured Standalone master. Both modes
+use these lazy routes:
 
 | Route                                                                 | Source                                                                                                                  | Result                                                                                      |
 |-----------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
-| `GET /api/v1/catalogs`                                                | Polaris mode: `polaris_schema.entities`; Spark mode: Spark Connect                                                      | Catalog names                                                                               |
-| `GET /api/v1/catalogs/{catalog}/schemas`                              | Polaris mode: recursive namespace query; Spark mode: Spark Connect                                                      | Nested namespace paths                                                                      |
-| `GET /api/v1/catalogs/{catalog}/schemas/{schema}/tables`              | Polaris mode: table-like entities; Spark mode: Spark Connect                                                            | Tables and views                                                                            |
-| `GET /api/v1/catalogs/{catalog}/schemas/{schema}/tables/{table}`      | Spark mode: Spark Connect; Polaris mode: entity properties merged with available Spark `DESCRIBE TABLE EXTENDED` output | Location, extended metadata properties (including expanded `Table Properties`), and columns |
-| `GET /api/v1/catalogs/{catalog}/schemas/{schema}/tables/{table}/data` | Spark Connect `SELECT * ... LIMIT n`                                                                                    | A bounded sample of at most 100 rows                                                        |
+| `GET /api/v1/catalogs`                                                | Polaris mode: `polaris_schema.entities`; Spark mode: bounded app submitted to Standalone                                | Catalog names                                                                               |
+| `GET /api/v1/catalogs/{catalog}/schemas`                              | Polaris mode: recursive namespace query; Spark mode: bounded app submitted to Standalone                                | Nested namespace paths                                                                      |
+| `GET /api/v1/catalogs/{catalog}/schemas/{schema}/tables`              | Polaris mode: table-like entities; Spark mode: bounded app submitted to Standalone                                      | Tables and views                                                                            |
+| `GET /api/v1/catalogs/{catalog}/schemas/{schema}/tables/{table}`      | Spark mode: Spark application query; Polaris mode: entity properties merged with Spark `DESCRIBE TABLE EXTENDED` output | Location, extended metadata properties (including expanded `Table Properties`), and columns |
+| `GET /api/v1/catalogs/{catalog}/schemas/{schema}/tables/{table}/data` | Bounded Spark `SELECT * ... LIMIT n` application submitted to Standalone                                                | A bounded sample of at most 100 rows                                                        |
 
-Set `CATALOG_BACKEND=spark` when Polaris metadata is unavailable and Spark
-Connect owns the catalog hierarchy. In Spark 4.2, the built-in catalog is
+Set `CATALOG_BACKEND=spark` when Polaris metadata is unavailable and the
+configured Spark catalog owns the hierarchy. In Spark 4.2, the built-in catalog is
 `spark_catalog` and its default database is `default`.
 
 Set `POLARIS_POSTGRES_DATABASE=polaris` and, when needed, the other

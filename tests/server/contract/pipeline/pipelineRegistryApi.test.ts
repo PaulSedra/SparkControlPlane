@@ -18,8 +18,9 @@ import { createPipelineFixture } from '../../../support/pipelineFixture.ts';
 import { createTestDataLoader } from '../../../support/testData.ts';
 import { captureEnvironment } from '../../../support/testEnvironment.ts';
 import { createPipelineRegistryService } from '../../../../src/server/pipeline/pipelineRegistryService.ts';
-import { pipelineRegistryApiPlugin } from '../../../../src/server/api/controlPlaneApiVitePlugin.ts';
+import { controlPlaneApiPlugin } from '../../../../src/server/api/controlPlaneApiVitePlugin.ts';
 import type { CanonicalTriggerEvent } from '../../../../src/server/types/triggerTypes.ts';
+import { CliExecutionState } from '../../../../src/shared/status/execution.ts';
 
 const testData = createTestDataLoader('server/contract');
 
@@ -61,9 +62,25 @@ test('pipeline submissions are asynchronous, queued, and idempotent', async () =
     const server = await createServer({
         configFile: false,
         logLevel: 'silent',
-        plugins: [pipelineRegistryApiPlugin({
+        plugins: [controlPlaneApiPlugin({
             aistorWebhookToken: 'test-aistor-token',
             persistence: createInMemoryPersistence(),
+            runExecutor: async () => ({
+                canceled: false,
+                command: ['spark-pipelines', 'run'],
+                detached: false,
+                exitCode: 1,
+                cliState: CliExecutionState.FAILED,
+                reason: 'Expected contract-test execution failure.',
+                stderr: 'Expected contract-test execution failure.',
+                stdout: '',
+                timedOut: false,
+            }),
+            sparkQueryService: {
+                query: async () => {
+                    throw new Error('Spark Standalone is not configured for data samples.');
+                },
+            },
         })],
         server: { host: '127.0.0.1', port: 0 },
     });
@@ -391,7 +408,7 @@ test('pipeline submissions are asynchronous, queued, and idempotent', async () =
         assert.deepEqual(await fetchJson(
             `${baseUrl}${pipelinePath}/nodes/${encodeURIComponent(selectedNodeId)}/data`,
             500,
-        ), testFixture.errors.noSparkConnect);
+        ), testFixture.errors.noSparkStandalone);
         await assertMethodNotAllowed(
             `${baseUrl}${pipelinePath}/nodes/${encodeURIComponent(selectedNodeId)}/data`,
             'POST',

@@ -1,4 +1,4 @@
-# Disposable local demo stack. Defaults are intentionally local-only.
+# Local demo submits one Spark application per pipeline run to Standalone.
 name: spark-control-plane-demo
 
 services:
@@ -16,36 +16,64 @@ services:
       timeout: 5s
       retries: 10
 
-  spark-connect:
-    image: apache/spark:4.2.0-python3
+  spark-master:
+    build:
+      context: ./docker/integration/spark
+      args:
+        SPARK_BASE_IMAGE: apache/spark:4.2.0-python3
+        JAVA_RUNTIME_IMAGE: eclipse-temurin:21-jre-jammy
+    image: spark-control-plane:spark-demo-4.2.0
+    entrypoint: ["/opt/spark/bin/spark-class"]
+    command:
+      - org.apache.spark.deploy.master.Master
+      - --host
+      - spark-master
+      - --port
+      - "7077"
+      - --webui-port
+      - "8080"
     environment:
       HOME: /tmp
-      PYTHONPATH: /opt/spark/python:/opt/spark/python/lib/py4j-0.10.9.9-src.zip
-      PYSPARK_PYTHON: /usr/bin/python3
+      SPARK_LOCAL_IP: spark-master
       SPARK_LOCAL_DIRS: /tmp/spark-local
-      SPARK_LOCAL_IP: spark-connect
-      SPARK_NO_DAEMONIZE: "1"
-    command:
-      - /opt/spark/sbin/start-connect-server.sh
-      - --wait
-      - --conf
-      - spark.sql.catalogImplementation=in-memory
-      - --conf
-      - spark.sql.defaultCatalog=spark_catalog
-      - --conf
-      - spark.sql.warehouse.dir=file:///tmp/spark-control-plane-demo-warehouse
-      - --conf
-      - spark.driver.bindAddress=0.0.0.0
-      - --conf
-      - spark.driver.host=spark-connect
-    expose:
-      - "15002"
+    ports:
+      - "127.0.0.1::8080"
     healthcheck:
-      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/15002'"]
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/spark-master/7077'"]
       interval: 3s
       timeout: 5s
       retries: 60
-      start_period: 30s
+      start_period: 10s
+    restart: unless-stopped
+
+  spark-worker:
+    image: spark-control-plane:spark-demo-4.2.0
+    user: "0:0"
+    depends_on:
+      spark-master:
+        condition: service_healthy
+    entrypoint: ["/opt/spark/bin/spark-class"]
+    command:
+      - org.apache.spark.deploy.worker.Worker
+      - spark://spark-master:7077
+      - --host
+      - spark-worker
+      - --webui-port
+      - "8081"
+    environment:
+      HOME: /tmp
+      SPARK_LOCAL_IP: spark-worker
+      SPARK_LOCAL_DIRS: /tmp/spark-local
+      SPARK_WORKER_CORES: "2"
+    volumes:
+      - demo-spark-data:/tmp/spark-control-plane-demo-checkpoints
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/spark-worker/8081'"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+      start_period: 10s
+    restart: unless-stopped
 
   control-plane:
     build:
@@ -53,12 +81,12 @@ services:
       args:
         APP_VERSION: 0.1.2
         NODE_IMAGE: node:24.19.0-bookworm-slim
-        PYTHON_IMAGE: python:3.12-slim-bookworm
+        PYTHON_IMAGE: python:3.10.12-slim-bookworm
     image: spark-control-plane:demo
     depends_on:
       postgres:
         condition: service_healthy
-      spark-connect:
+      spark-worker:
         condition: service_healthy
     environment:
       CONTROL_PLANE_HOST: 0.0.0.0
@@ -66,6 +94,7 @@ services:
       CATALOG_BACKEND: spark
       AISTOR_WEBHOOK_TOKEN: local-development-only
       PIPELINES_DIR: /app/pipelines
+      PIPELINE_RUN_STATE_DIRECTORY: /app/run-state
       PYTHON_EXECUTABLE: /usr/local/bin/python
       PYSPARK_PYTHON: /usr/local/bin/python
       PYSPARK_DRIVER_PYTHON: /usr/local/bin/python
@@ -76,7 +105,12 @@ services:
       POSTGRES_PASSWORD: local-development-only
       POSTGRES_SSLMODE: disable
       POSTGRES_SCHEMA: public
-      SPARK_CONNECT_URL: sc://spark-connect:15002
+      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_DRIVER_HOST: control-plane
+      SPARK_EXECUTOR_PYTHON: ${SPARK_EXECUTOR_PYTHON:-python3}
+      SPARK_CLI_BINARY: ${SPARK_CLI_BINARY:-spark-pipelines}
+      SPARK_CLI_PROPERTIES_FILE: /app/spark-defaults.demo.conf
+      SPARK_HISTORY_URL: ${SPARK_HISTORY_URL:-}
     ports:
       - "127.0.0.1::8080"
     volumes:
@@ -84,6 +118,12 @@ services:
         source: ./examples/pipelines
         target: /app/pipelines
         read_only: true
+      - type: bind
+        source: ./docker/demo/spark-defaults.conf
+        target: /app/spark-defaults.demo.conf
+        read_only: true
+      - demo-spark-data:/tmp/spark-control-plane-demo-checkpoints
+      - demo-run-state:/app/run-state
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "docker/control-plane-healthcheck.mjs"]
@@ -94,3 +134,5 @@ services:
 
 volumes:
   demo-postgres-data:
+  demo-run-state:
+  demo-spark-data:

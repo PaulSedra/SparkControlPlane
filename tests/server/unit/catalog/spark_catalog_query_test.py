@@ -1,6 +1,5 @@
-"""Unit coverage for the Spark Connect catalog Python adapter."""
+"""Unit coverage for read-only Spark catalog query helpers."""
 
-import contextlib
 import datetime
 import decimal
 import importlib.util
@@ -10,6 +9,7 @@ import os
 import sys
 import types
 import unittest
+import contextlib
 from unittest import mock
 
 
@@ -171,7 +171,7 @@ def load_catalog_module(script_path):
         sys.path.insert(0, catalog_directory)
 
     module_spec = importlib.util.spec_from_file_location(
-        "spark_connect_catalog",
+        "spark_catalog_query",
         script_path,
     )
     module = importlib.util.module_from_spec(module_spec)
@@ -441,8 +441,10 @@ class SparkCatalogMetadataTest(unittest.TestCase):
             RuntimeError("unexpected operation failure"),
         ):
             with self.subTest(error=type(error).__name__):
-                with self.assertRaises(type(error)):
-                    metadata.table_types(FakeSpark(error=error), namespace)
+                error_type = type(error)
+                spark = FakeSpark(error=error)
+                with self.assertRaises(error_type):
+                    metadata.table_types(spark, namespace)
 
     def test_table_listing_classifies_views_and_keeps_unknown_metadata_unknown(self):
         rows = [
@@ -490,13 +492,9 @@ class SparkCatalogMetadataTest(unittest.TestCase):
         self.assertEqual(detail["tableType"], "UNKNOWN")
         self.assertIn("SPARK_CATALOG_WARNING:", warning_stream.getvalue())
 
+        spark = FakeSpark(error=AccessDeniedException("permission denied"))
         with self.assertRaises(AccessDeniedException):
-            metadata.describe_table(
-                FakeSpark(error=AccessDeniedException("permission denied")),
-                "example",
-                "silver",
-                "events",
-            )
+            metadata.describe_table(spark, "example", "silver", "events")
 
     def test_identifier_quoting_escapes_embedded_backticks(self):
         delimiter = chr(96)
@@ -525,94 +523,14 @@ class SparkCatalogMetadataTest(unittest.TestCase):
         self.assertNotIn("private-value", safe["location"])
         self.assertNotIn("private-value", safe["notes"])
 
-    def test_maximum_response_setting_is_configurable_and_validated(self):
-        with mock.patch.dict(
-            os.environ,
-            {"SPARK_CATALOG_MAX_RESPONSE_BYTES": "2048"},
-            clear=False,
-        ):
-            self.assertEqual(catalog.configured_max_response_bytes(), 2048)
+    def test_dispatch_routes_catalog_listing_and_detail(self):
+        catalogs = catalog.dispatch_operation(
+            types.SimpleNamespace(command="catalogs"),
+            FakeSpark(FakeResult([FakeRow(catalog="spark_catalog")])),
+            8192,
+        )
+        self.assertEqual(catalogs, {"catalogs": [{"name": "spark_catalog"}]})
 
-        with mock.patch.dict(
-            os.environ,
-            {"SPARK_CATALOG_MAX_RESPONSE_BYTES": "0"},
-            clear=False,
-        ):
-            with self.assertRaises(errors.CatalogConfigurationError):
-                catalog.configured_max_response_bytes()
-
-    def test_cli_emits_json_to_stdout_and_sanitized_errors_on_stderr(self):
-        catalog_environment = {"SPARK_CONNECT_URL": "sc://user:private-value@host"}
-        success_spark = FakeSpark(FakeResult([FakeRow(catalog="spark_catalog")]))
-
-        class SuccessBuilder:
-            def remote(self, connect_url):
-                self.connect_url = connect_url
-                return self
-
-            def getOrCreate(self):
-                return success_spark
-
-        class SuccessSession:
-            builder = SuccessBuilder()
-
-        original_session = catalog.SparkSession
-        catalog.SparkSession = SuccessSession
-        try:
-            with mock.patch.dict(os.environ, catalog_environment, clear=False):
-                with mock.patch.object(
-                    sys,
-                    "argv",
-                    ["spark_connect_catalog.py", "catalogs"],
-                ):
-                    stdout = io.StringIO()
-                    stderr = io.StringIO()
-                    with contextlib.redirect_stdout(stdout):
-                        with contextlib.redirect_stderr(stderr):
-                            catalog.main()
-            self.assertEqual(json.loads(stdout.getvalue()), {
-                "catalogs": [{"name": "spark_catalog"}],
-            })
-            self.assertTrue(stdout.getvalue().endswith("\n"))
-            self.assertEqual(stderr.getvalue(), "")
-        finally:
-            catalog.SparkSession = original_session
-
-        class FailingBuilder:
-            def remote(self, connect_url):
-                self.connect_url = connect_url
-                return self
-
-            def getOrCreate(self):
-                raise ConnectionError(
-                    "failed to connect to sc://user:private-value@host"
-                )
-
-        class FailingSession:
-            builder = FailingBuilder()
-
-        catalog.SparkSession = FailingSession
-        try:
-            with mock.patch.dict(os.environ, catalog_environment, clear=False):
-                with mock.patch.object(
-                    sys,
-                    "argv",
-                    ["spark_connect_catalog.py", "catalogs"],
-                ):
-                    stdout = io.StringIO()
-                    stderr = io.StringIO()
-                    with contextlib.redirect_stdout(stdout):
-                        with contextlib.redirect_stderr(stderr):
-                            result = catalog.run_cli()
-            self.assertEqual(result, 1)
-            self.assertEqual(stdout.getvalue(), "")
-            self.assertIn("SPARK_CATALOG_ERROR: connection:", stderr.getvalue())
-            self.assertNotIn("private-value", stderr.getvalue())
-        finally:
-            catalog.SparkSession = original_session
-
-
-    def test_cli_detail_response_keeps_its_json_contract_after_extraction(self):
         rows = [
             FakeRow("# col_name", "data_type", "comment"),
             FakeRow("id", "bigint", ""),
@@ -625,46 +543,16 @@ class SparkCatalogMetadataTest(unittest.TestCase):
             FakeRow("Provider", "iceberg", ""),
         ]
         spark = FakeSpark(FakeResult(rows))
-
-        class SuccessBuilder:
-            def remote(self, connect_url):
-                self.connect_url = connect_url
-                return self
-
-            def getOrCreate(self):
-                return spark
-
-        class SuccessSession:
-            builder = SuccessBuilder()
-
-        original_session = catalog.SparkSession
-        catalog.SparkSession = SuccessSession
-        try:
-            with mock.patch.dict(
-                os.environ,
-                {"SPARK_CONNECT_URL": "sc://spark"},
-                clear=False,
-            ):
-                with mock.patch.object(
-                    sys,
-                    "argv",
-                    [
-                        "spark_connect_catalog.py",
-                        "detail",
-                        "--catalog",
-                        "example",
-                        "--schema",
-                        "silver",
-                        "--table",
-                        "events",
-                    ],
-                ):
-                    stdout = io.StringIO()
-                    with contextlib.redirect_stdout(stdout):
-                        catalog.main()
-            response = json.loads(stdout.getvalue())
-        finally:
-            catalog.SparkSession = original_session
+        response = catalog.dispatch_operation(
+            types.SimpleNamespace(
+                command="detail",
+                catalog="example",
+                schema="silver",
+                table="events",
+            ),
+            spark,
+            8192,
+        )
 
         self.assertEqual(response["catalog"], "example")
         self.assertEqual(response["schema"], "silver")
@@ -676,7 +564,6 @@ class SparkCatalogMetadataTest(unittest.TestCase):
             [{"name": "id", "type": "bigint"}, {"name": "region", "type": "string"}],
         )
         self.assertEqual(response["properties"]["Provider"], "iceberg")
-        self.assertTrue(stdout.getvalue().endswith("\n"))
 
 
 if __name__ == "__main__":

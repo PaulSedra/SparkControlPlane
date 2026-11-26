@@ -9,6 +9,7 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { boundedPositiveInteger } from '../../config/configValues.ts';
 import { ControlPlaneApiError } from '../../errors/controlPlaneApiError.ts';
 import type {
     PipelineDetail,
@@ -238,9 +239,11 @@ function validateSpec(spec: PipelineSpec, sourceFiles: string[]): string[] {
 
 function configuredDiscoveryConcurrency(): number {
     const configured = Number(process.env.PIPELINE_DISCOVERY_CONCURRENCY?.trim() ?? '');
-    return Number.isSafeInteger(configured) && configured > 0
-        ? Math.min(MAX_DISCOVERY_CONCURRENCY, configured)
-        : DEFAULT_DISCOVERY_CONCURRENCY;
+    return boundedPositiveInteger(
+        configured,
+        DEFAULT_DISCOVERY_CONCURRENCY,
+        MAX_DISCOVERY_CONCURRENCY,
+    );
 }
 
 function normalizePipelineName(name: string): string {

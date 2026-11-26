@@ -11,12 +11,14 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createControlPlaneHttpHandler } from '../api/controlPlaneHttp.ts';
 import { createCatalogService } from '../catalog/catalogServiceFactory.ts';
+import { createSparkStandaloneQueryService } from '../catalog/sparkStandaloneQueryService.ts';
 import { loadProductionConfig } from '../config/productionConfig.ts';
 import { createPipelineRegistryService } from '../pipeline/pipelineRegistryService.ts';
 import type { CatalogService } from '../types/catalogServiceTypes.ts';
 import type { PipelineRegistryService } from '../types/pipelineServiceTypes.ts';
 import type { PostgresConfig } from '../types/postgresConfigTypes.ts';
 import type { ProductionConfig } from '../types/productionConfigTypes.ts';
+import type { SparkQueryService } from '../types/sparkQueryServiceTypes.ts';
 import { createHealthHandler } from './healthHandler.ts';
 import { createHttpRequestListener } from './httpResponse.ts';
 import { createRequestHandler } from './requestHandler.ts';
@@ -35,7 +37,9 @@ export interface StandaloneServerOptions {
     config?: ProductionConfig;
     polarisPostgresConfig?: PostgresConfig;
     service?: PipelineRegistryService;
+    /** Creates a complete replacement service and composes its own dependencies. */
     serviceFactory?: () => PipelineRegistryService;
+    sparkQueryService?: SparkQueryService;
 }
 
 /**
@@ -57,9 +61,15 @@ export function createStandaloneControlPlane(
 
     const config = options.config ?? loadProductionConfig();
     const ownsService = options.service == null;
+    const sparkQueryService = options.sparkQueryService ?? createSparkStandaloneQueryService({
+        driverHost: config.sparkDriverHost,
+        executorPython: config.sparkExecutorPython,
+        masterUrl: config.sparkMasterUrl,
+        propertiesFile: config.sparkPropertiesFile,
+    });
     const service = options.service ?? options.serviceFactory?.() ?? createPipelineRegistryService({
         postgresConfig: config.postgres,
-        sparkConnectUrl: config.sparkConnectUrl,
+        sparkQueryService,
     });
     const ownsCatalogService = options.catalogService == null;
     const catalogService = options.catalogService ??
@@ -67,7 +77,7 @@ export function createStandaloneControlPlane(
         createCatalogService({
             backend: config.catalogBackend ?? 'polaris',
             postgresConfig: options.polarisPostgresConfig ?? config.postgres,
-            sparkConnectUrl: config.sparkConnectUrl,
+            queryService: sparkQueryService,
         });
     const apiHandler = createControlPlaneHttpHandler({
         pipelineService: service,

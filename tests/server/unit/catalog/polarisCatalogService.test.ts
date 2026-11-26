@@ -57,13 +57,12 @@ test('Polaris detail enrichment retains parsed Spark DESCRIBE TABLE EXTENDED pro
     }
 });
 
-test('Polaris detail falls back only for explicitly unsupported Spark operations', async () => {
+test('Polaris detail uses metadata only when Spark detail is unsupported', async () => {
     const unsupported = new Error('unsupported');
     unsupported.name = 'SparkCatalogUnsupportedOperationError';
     const service = createPolarisCatalogService({
         pool: createFakePolarisPool(),
         polarisSchema: 'polaris_schema',
-        sparkConnectUrl: 'sc://spark',
         sparkService: {
             getTable: async () => {
                 throw unsupported;
@@ -77,11 +76,10 @@ test('Polaris detail falls back only for explicitly unsupported Spark operations
     assert.equal(detail.tableType, 'TABLE');
     assert.deepEqual(detail.columns, []);
 
-    const connectionError = new Error('Spark Connect failed');
+    const connectionError = new Error('Spark query failed');
     const failingService = createPolarisCatalogService({
         pool: createFakePolarisPool(),
         polarisSchema: 'polaris_schema',
-        sparkConnectUrl: 'sc://spark',
         sparkService: {
             getTable: async () => {
                 throw connectionError;

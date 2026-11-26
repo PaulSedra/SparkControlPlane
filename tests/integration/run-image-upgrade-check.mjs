@@ -19,7 +19,6 @@ const pipelineHostPath = options.pipelinePath;
 const postgresCleanupHost = '127.0.0.1';
 const containerPostgresHost = options.containerPostgresHost;
 const containerPostgresPort = options.containerPostgresPort;
-const containerSparkConnectUrl = options.containerSparkConnectUrl;
 const requiredNames = [
     'POSTGRES_HOST',
     'POSTGRES_PORT',
@@ -27,7 +26,7 @@ const requiredNames = [
     'POSTGRES_USER',
     'POSTGRES_PASSWORD',
     'POSTGRES_SSLMODE',
-    'SPARK_CONNECT_URL',
+    'SPARK_MASTER_URL',
 ];
 for (const name of requiredNames) {
     if (!process.env[name]?.trim()) {
@@ -36,6 +35,9 @@ for (const name of requiredNames) {
 }
 if (!fs.existsSync(pipelineHostPath)) {
     throw new Error('The managed pipeline fixture path does not exist.');
+}
+if (!fs.existsSync(options.sparkPropertiesPath)) {
+    throw new Error('The managed Spark properties file does not exist.');
 }
 
 const suffix = `${process.pid}_${Date.now()}`;
@@ -52,11 +54,11 @@ const containerEnvironment = {
     POSTGRES_HOST: containerPostgresHost,
     POSTGRES_PORT: containerPostgresPort,
     POSTGRES_SCHEMA: schema,
-    SPARK_CONNECT_URL: containerSparkConnectUrl,
+    SPARK_CLI_PROPERTIES_FILE: '/opt/integration/spark-defaults.conf',
 };
 
 try {
-    const previousVersions = await startReadMigrations(previousImage, previousContainer);
+    const previousVersions = await startReadMigrations(previousImage, previousContainer, true);
     removeContainer(previousContainer);
     const currentVersions = await startReadMigrations(currentImage, currentContainer);
     removeContainer(currentContainer);
@@ -75,14 +77,22 @@ try {
     await dropSchema();
 }
 
-async function startReadMigrations(image, containerName) {
+async function startReadMigrations(image, containerName, previous = false) {
+    // The migration baseline predates the switch to Spark Standalone.
+    // The readiness check does not submit Spark jobs.
+    const legacySparkEnvironment = previous
+        ? ['--env', 'SPARK_CONNECT_URL=sc://127.0.0.1:15002']
+        : [];
     runDocker([
         'run',
         '--detach',
         '--name', containerName,
         '--publish', `127.0.0.1:${hostPort}:8080`,
         '--mount', `type=bind,source=${pipelineHostPath},target=/app/pipelines,readonly`,
+        '--mount', `type=bind,source=${options.sparkPropertiesPath},target=/opt/integration/spark-defaults.conf,readonly`,
         ...forwardedEnvironmentNames().flatMap((name) => ['--env', name]),
+        '--env', `SPARK_DRIVER_HOST=${containerName}`,
+        ...legacySparkEnvironment,
         image,
     ], { network: options.network });
     await waitForReady(baseUrl);
@@ -105,10 +115,10 @@ function parseOptions(args) {
     return {
         containerPostgresHost: requiredOption(args, '--container-postgres-host'),
         containerPostgresPort: requiredOption(args, '--container-postgres-port'),
-        containerSparkConnectUrl: requiredOption(args, '--container-spark-connect-url'),
         currentImage: requiredOption(args, '--current-image'),
         network: optionalOption(args, '--network'),
         pipelinePath: requiredOption(args, '--pipeline-path'),
+        sparkPropertiesPath: requiredOption(args, '--spark-properties-path'),
         previousImage: optionalOption(args, '--previous-image') || 'spark-control-plane:local',
     };
 }
@@ -175,7 +185,10 @@ function forwardedEnvironmentNames() {
         'POSTGRES_SSLROOTCERT',
         'POSTGRES_SSLCERT',
         'POSTGRES_SSLKEY',
-        'SPARK_CONNECT_URL',
+        'SPARK_MASTER_URL',
+        'SPARK_DRIVER_HOST',
+        'SPARK_EXECUTOR_PYTHON',
+        'SPARK_CLI_PROPERTIES_FILE',
         'SPARK_HISTORY_URL',
     ].filter((name) => containerEnvironment[name] != null);
 }

@@ -15,7 +15,7 @@ test('Spark catalog detail expands and omits the aggregate Table Properties entr
             'src',
             'server',
             'catalog',
-            'spark_connect_catalog.py',
+            'spark_catalog_query.py',
         ),
     ]);
     assert.equal(result.exitCode, 0, result.stderr || result.stdout);
@@ -29,14 +29,14 @@ test('Spark catalog metadata, serialization, limits, and failures are covered', 
             'server',
             'unit',
             'catalog',
-            'spark_connect_catalog_test.py',
+            'spark_catalog_query_test.py',
         ),
         path.join(
             process.cwd(),
             'src',
             'server',
             'catalog',
-            'spark_connect_catalog.py',
+            'spark_catalog_query.py',
         ),
     ]);
     assert.equal(result.exitCode, 0, result.stderr || result.stdout);
@@ -63,7 +63,7 @@ sys.modules["pyspark.sql"] = sql_module
 
 script_path = sys.argv[1]
 sys.path.insert(0, os.path.dirname(os.path.abspath(script_path)))
-module_spec = importlib.util.spec_from_file_location("spark_connect_catalog", script_path)
+module_spec = importlib.util.spec_from_file_location("spark_catalog_query", script_path)
 catalog = importlib.util.module_from_spec(module_spec)
 module_spec.loader.exec_module(catalog)
 metadata = sys.modules["catalog_metadata"]

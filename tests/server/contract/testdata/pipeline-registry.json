@@ -123,9 +123,9 @@
       "code": "UNAUTHORIZED",
       "message": "Valid AIStor authorization is required."
     },
-    "noSparkConnect": {
+    "noSparkStandalone": {
       "code": "INTERNAL_ERROR",
-      "message": "No Spark Connect target is configured for data samples."
+      "message": "Spark Standalone is not configured for data samples."
     },
     "idempotencyConflict": {
       "code": "CONFLICT",

@@ -20,8 +20,8 @@ services:
       PIPELINE_RUN_RECOVERY_BATCH_SIZE: ${PIPELINE_RUN_RECOVERY_BATCH_SIZE:-100}
       PIPELINE_RUN_POLICIES: ${PIPELINE_RUN_POLICIES:-}
       PYTHON_EXECUTABLE: ${PYTHON_EXECUTABLE:-/usr/local/bin/python}
-      PYSPARK_PYTHON: /usr/local/bin/python
-      PYSPARK_DRIVER_PYTHON: /usr/local/bin/python
+      PYSPARK_PYTHON: ${PYSPARK_PYTHON:-/usr/local/bin/python}
+      PYSPARK_DRIVER_PYTHON: ${PYSPARK_DRIVER_PYTHON:-/usr/local/bin/python}
       POSTGRES_HOST: ${POSTGRES_HOST:?Set POSTGRES_HOST in the caller environment}
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
       POSTGRES_DATABASE: ${POSTGRES_DATABASE:?Set POSTGRES_DATABASE in the caller environment}
@@ -43,12 +43,13 @@ services:
       POLARIS_POSTGRES_SSLCERT: ${POLARIS_POSTGRES_SSLCERT:-}
       POLARIS_POSTGRES_SSLKEY: ${POLARIS_POSTGRES_SSLKEY:-}
       POLARIS_POSTGRES_SCHEMA: ${POLARIS_POSTGRES_SCHEMA:-polaris_schema}
-      SPARK_CONNECT_URL: ${SPARK_CONNECT_URL:?Set SPARK_CONNECT_URL in the caller environment}
-      SPARK_HISTORY_URL: ${SPARK_HISTORY_URL:-}
+      SPARK_MASTER_URL: ${SPARK_MASTER_URL:?Set SPARK_MASTER_URL to the existing Spark Standalone master URL}
+      SPARK_DRIVER_HOST: ${SPARK_DRIVER_HOST:?Set SPARK_DRIVER_HOST to an address reachable from Spark workers}
+      SPARK_EXECUTOR_PYTHON: ${SPARK_EXECUTOR_PYTHON:-python3}
       SPARK_CLI_BINARY: ${SPARK_CLI_BINARY:-spark-pipelines}
-      SPARK_CLI_PYTHON: ${SPARK_CLI_PYTHON:-/usr/local/bin/python}
       SPARK_CLI_PROPERTIES_FILE: ${SPARK_CLI_PROPERTIES_FILE:-}
-      SPARK_CLI_STATE_DIRECTORY: ${SPARK_CLI_STATE_DIRECTORY:-/app/run-state}
+      PIPELINE_RUN_STATE_DIRECTORY: ${PIPELINE_RUN_STATE_DIRECTORY:-/app/run-state}
+      SPARK_HISTORY_URL: ${SPARK_HISTORY_URL:-}
     ports:
       # Host port -> container listen port. These may be different when the host port is occupied.
       - "${CONTROL_PLANE_HOST_PORT:-8080}:${CONTROL_PLANE_PORT:-8080}"
@@ -69,3 +70,10 @@ services:
       options:
         max-size: 10m
         max-file: "5"
+    networks:
+      default:
+        aliases:
+          - spark-control-plane
+
+networks:
+  default: {}

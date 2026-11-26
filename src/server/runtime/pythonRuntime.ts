@@ -1,6 +1,6 @@
 /**
  * @fileoverview Selects the configured or repository-local Python executable
- * used by Spark adapters and workers.
+ * used by Spark and source discovery helpers.
  */
 
 import { existsSync } from 'node:fs';
@@ -14,7 +14,7 @@ import path from 'node:path';
  * exists, followed by the platform's conventional command; relative command
  * names are retained because they are resolved by the child-process PATH.
  * This function only chooses a command—it does not verify that Python can
- * import the required Spark libraries or start a Spark Connect session.
+ * import the discovery dependencies.
  */
 export function resolvePythonExecutable(
     environment: NodeJS.ProcessEnv = process.env,

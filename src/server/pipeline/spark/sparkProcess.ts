@@ -27,7 +27,6 @@ export async function runSparkProcess(
     run: PipelineRun,
     parsed: ParsedPipeline | undefined,
     executionMode: 'monitor' | 'submit',
-    sparkConnectUrl: string | undefined,
     shouldCancel: () => Promise<boolean>,
     onSnapshot: (
         snapshot: LocalCliRunSnapshot,
@@ -37,10 +36,7 @@ export async function runSparkProcess(
 ): Promise<LocalCliCommandResult> {
     try {
         if (executionMode === 'submit' && parsed == null) {
-            throw new Error('Pipeline metadata is required before starting a local CLI run.');
-        }
-        if (executionMode === 'submit' && (sparkConnectUrl == null || sparkConnectUrl.trim() === '')) {
-            throw new Error('SPARK_CONNECT_URL is required for Spark Pipelines CLI execution.');
+            throw new Error('Pipeline metadata is required before submitting a Spark Pipelines run.');
         }
         logStructured('spark_process_started', {
             correlationId: run.correlationId,
@@ -50,19 +46,25 @@ export async function runSparkProcess(
             requestSource: run.requestSource,
             runId: run.runId,
         });
-        return await runSparkCliProcess({
-            executionMode,
+        const options = {
             onController: onLocalProcess,
             onSnapshot,
             run,
             shouldCancel,
-            spec: parsed?.detail.spec,
-            sparkConnectUrl,
             targetNodeNames: sparkRefreshDatasetNames(
                 run.targetNodeNames ?? run.repairedNodeNames,
                 parsed?.detail,
             ),
-        });
+        };
+        if (executionMode === 'submit' && parsed != null) {
+            return await runSparkCliProcess({
+                ...options,
+                executionMode,
+                spec: parsed.detail.spec,
+                sourceFiles: parsed.sourceContents.map((source) => source.sourceFile),
+            });
+        }
+        return await runSparkCliProcess({ ...options, executionMode: 'monitor', spec: parsed?.detail.spec });
     } catch (error) {
         incrementMetric('control_plane_spark_start_failures_total');
         const reason = error instanceof Error ? error.message : String(error);

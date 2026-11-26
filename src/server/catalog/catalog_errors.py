@@ -56,7 +56,7 @@ def is_permission_error(error: Exception) -> bool:
 
 
 def is_connection_error(error: Exception) -> bool:
-    """Recognize Spark Connect and transport failures before fallback checks."""
+    """Recognize Spark and transport failures before fallback checks."""
     condition = spark_error_condition(error)
     class_name = type(error).__name__.casefold()
     message = str(error).casefold()
@@ -114,10 +114,29 @@ def safe_diagnostic(error: Exception) -> tuple[str, str]:
     if is_permission_error(error):
         return "permission", "Spark denied the catalog operation."
     if is_connection_error(error):
-        return "connection", "Spark Connect could not complete the catalog operation."
+        return "connection", "Spark could not complete the catalog operation."
     if is_unsupported_spark_operation(error):
         return "unsupported", "Spark does not support the catalog operation."
     return (
         "unexpected",
-        f"Spark catalog operation failed ({type(error).__name__}).",
+        f"Spark catalog operation failed ({diagnostic_error_type(error)}).",
     )
+
+
+def diagnostic_error_type(error: Exception) -> str:
+    """Identify a wrapped JVM error without exposing its raw message."""
+    name = type(error).__name__
+    java_error = getattr(error, "java_exception", None)
+    if java_error is None:
+        return name
+    try:
+        for _ in range(3):
+            java_name = java_error.getClass().getSimpleName()
+            if re.fullmatch(r"\w+", java_name, flags=re.ASCII):
+                name += f": {java_name}"
+            java_error = java_error.getCause()
+            if java_error is None:
+                break
+    except Exception:
+        pass
+    return name

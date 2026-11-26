@@ -22,6 +22,7 @@ import type {
     HistoryExportCursor,
 } from '../history/historyExport.ts';
 import type { PipelineRunPolicy } from './pipelineRunPolicyTypes.ts';
+import type { SparkQueryService } from './sparkQueryServiceTypes.ts';
 import type { LocalCliRunExecutor } from '../pipeline/execution/runExecution.ts';
 import type {
     CanonicalTriggerEvent,
@@ -65,7 +66,7 @@ export interface PipelineRegistryServiceOptions {
     pipelineRunPolicies?: Map<string, PipelineRunPolicy>;
     persistence?: ControlPlanePersistence;
     postgresConfig?: PostgresConfig;
-    sparkConnectUrl?: string;
+    sparkQueryService?: SparkQueryService;
     runExecutor?: LocalCliRunExecutor;
     triggerSchedulerIntervalMilliseconds?: number;
 }

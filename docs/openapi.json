@@ -86,7 +86,7 @@
       "get": {
         "summary": "Discover catalogs from the configured backend",
         "responses": {
-          "200": { "description": "Catalogs returned from the configured Polaris or Spark Connect backend.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CatalogList" } } } },
+          "200": { "description": "Catalogs returned from configured Polaris metadata or a Spark query submitted to Standalone.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CatalogList" } } } },
           "500": { "$ref": "#/components/responses/Error" }
         }
       }

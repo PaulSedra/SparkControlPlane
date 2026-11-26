@@ -7,7 +7,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { ParsedPipeline } from '../discovery/pipelineDiscovery.ts';
 import { mapWithConcurrency } from '../mapWithConcurrency.ts';
-import { pipelineProjectRoot, pipelineRunStateDirectory } from './pipelineRuntime.ts';
+import {
+    pipelineProjectRoot,
+    pipelineRunStateDirectory,
+    resolveInsideRoot,
+} from './pipelineRuntime.ts';
 import { hashPipelineSourceSnapshot } from '../discovery/pipelineVersion.ts';
 
 const SNAPSHOT_FILE_CONCURRENCY = 8;
@@ -111,16 +115,6 @@ export async function createVerifiedPipelineExecutionSnapshot(
         await fs.rm(stagingDirectory, { force: true, recursive: true });
         throw error;
     }
-}
-
-function resolveInsideRoot(root: string, relativePath: string): string {
-    const resolvedRoot = path.resolve(root);
-    const resolvedPath = path.resolve(resolvedRoot, relativePath);
-    const relative = path.relative(resolvedRoot, resolvedPath);
-    if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
-        throw new Error(`Pipeline source path escapes its project root: ${relativePath}`);
-    }
-    return resolvedPath;
 }
 
 function normalizeSourcePath(sourcePath: string): string {

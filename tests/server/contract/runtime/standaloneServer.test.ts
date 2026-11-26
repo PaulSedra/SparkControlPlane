@@ -25,29 +25,15 @@ test('production configuration validates required values', () => {
         /PIPELINES_DIR is required/,
     );
     assert.throws(
-        () => loadProductionConfig({ PIPELINES_DIR: './pipelines' }),
-        /SPARK_CONNECT_URL is required/,
-    );
-    assert.throws(
-        () => loadProductionConfig({
-            PIPELINES_DIR: './pipelines',
-            SPARK_CONNECT_REMOTE: 'sc://legacy-spark:15002',
-            SPARK_REMOTE: 'sc://older-spark:15002',
-        }),
-        /SPARK_CONNECT_URL is required/,
-    );
-    assert.throws(
         () => loadProductionConfig({
             CONTROL_PLANE_PORT: '70000',
             PIPELINES_DIR: './pipelines',
-            SPARK_CONNECT_URL: 'sc://spark:15002',
         }),
         /CONTROL_PLANE_PORT must be between 1 and 65535/,
     );
     assert.throws(
         () => loadProductionConfig({
             PIPELINES_DIR: './pipelines',
-            SPARK_CONNECT_URL: 'sc://spark:15002',
         }),
         /AISTOR_WEBHOOK_TOKEN is required/,
     );
@@ -79,13 +65,13 @@ test('standalone server serves the built UI, health, readiness, and versioned AP
             drainMilliseconds: 100,
             host: '127.0.0.1',
             port: 0,
-            sparkConnectUrl: 'sc://spark-connect:15002',
+            sparkDriverHost: 'control-plane',
+            sparkMasterUrl: 'spark://spark-master:7077',
             staticDirectory: path.join(repositoryRoot, 'dist'),
         },
         serviceFactory: () => {
             const service = createPipelineRegistryService({
                 persistence: createInMemoryPersistence(),
-                sparkConnectUrl: undefined,
             });
             const listPipelines = service.listPipelines;
             service.listPipelines = async () => {
@@ -322,7 +308,7 @@ test('standalone server serves the built UI, health, readiness, and versioned AP
             500,
         ), {
             code: 'INTERNAL_ERROR',
-            message: 'No Spark Connect target is configured for data samples.',
+            message: 'Spark Standalone is not configured for data samples.',
         });
 
         assert.deepEqual(await fetchJson(
@@ -450,7 +436,6 @@ test('standalone server leaves injected service lifecycle with its caller', asyn
     let catalogShutdowns = 0;
     const service = createPipelineRegistryService({
         persistence: createInMemoryPersistence(),
-        sparkConnectUrl: undefined,
     });
     const initialize = service.initialize;
     service.initialize = async () => {
@@ -472,7 +457,8 @@ test('standalone server leaves injected service lifecycle with its caller', asyn
             drainMilliseconds: 100,
             host: '127.0.0.1',
             port: 0,
-            sparkConnectUrl: 'sc://spark-connect:15002',
+            sparkDriverHost: 'control-plane',
+            sparkMasterUrl: 'spark://spark-master:7077',
             staticDirectory: path.join(repositoryRoot, 'dist'),
         },
         service,
@@ -533,13 +519,13 @@ test('listen failure removes startup listeners and shuts down owned services', a
             drainMilliseconds: 100,
             host: '127.0.0.1',
             port: occupiedAddress.port,
-            sparkConnectUrl: 'sc://spark-connect:15002',
+            sparkDriverHost: 'control-plane',
+            sparkMasterUrl: 'spark://spark-master:7077',
             staticDirectory: path.join(repositoryRoot, 'dist'),
         },
         serviceFactory: () => {
             const service = createPipelineRegistryService({
                 persistence: createInMemoryPersistence(),
-                sparkConnectUrl: undefined,
             });
             const shutdown = service.shutdown;
             service.shutdown = async (drainMilliseconds) => {
@@ -596,13 +582,13 @@ test('shutdown attempts every owned service when one shutdown rejects', async ()
             drainMilliseconds: 100,
             host: '127.0.0.1',
             port: 0,
-            sparkConnectUrl: 'sc://spark-connect:15002',
+            sparkDriverHost: 'control-plane',
+            sparkMasterUrl: 'spark://spark-master:7077',
             staticDirectory: path.join(repositoryRoot, 'dist'),
         },
         serviceFactory: () => {
             const service = createPipelineRegistryService({
                 persistence: createInMemoryPersistence(),
-                sparkConnectUrl: undefined,
             });
             const shutdown = service.shutdown;
             service.shutdown = async (drainMilliseconds) => {

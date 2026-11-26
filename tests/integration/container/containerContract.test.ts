@@ -18,26 +18,27 @@ test('Compose forwards direct runtime, policy, TLS, and port configuration', asy
         'AISTOR_WEBHOOK_TOKEN: ${AISTOR_WEBHOOK_TOKEN:?Set AISTOR_WEBHOOK_TOKEN in the caller environment}',
         'PIPELINE_RUN_LEASE_SECONDS',
         'PIPELINE_RUN_POLICIES',
-        'PYSPARK_PYTHON: /usr/local/bin/python',
-        'PYSPARK_DRIVER_PYTHON: /usr/local/bin/python',
+        'PYSPARK_PYTHON: ${PYSPARK_PYTHON:-/usr/local/bin/python}',
+        'PYSPARK_DRIVER_PYTHON: ${PYSPARK_DRIVER_PYTHON:-/usr/local/bin/python}',
         'POSTGRES_SSLROOTCERT',
         'POSTGRES_SSLCERT',
         'POSTGRES_SSLKEY',
-    'SPARK_CONNECT_URL: ${SPARK_CONNECT_URL:?Set SPARK_CONNECT_URL in the caller environment}',
-    'SPARK_HISTORY_URL: ${SPARK_HISTORY_URL:-}',
-        'SPARK_CLI_BINARY: ${SPARK_CLI_BINARY:-spark-pipelines}',
-        'SPARK_CLI_PYTHON: ${SPARK_CLI_PYTHON:-/usr/local/bin/python}',
+        'SPARK_MASTER_URL: ${SPARK_MASTER_URL:?Set SPARK_MASTER_URL to the existing Spark Standalone master URL}',
+        'SPARK_DRIVER_HOST: ${SPARK_DRIVER_HOST:?Set SPARK_DRIVER_HOST to an address reachable from Spark workers}',
         'SPARK_CLI_PROPERTIES_FILE: ${SPARK_CLI_PROPERTIES_FILE:-}',
-        'SPARK_CLI_STATE_DIRECTORY: ${SPARK_CLI_STATE_DIRECTORY:-/app/run-state}',
+        'SPARK_HISTORY_URL: ${SPARK_HISTORY_URL:-}',
+        'SPARK_CLI_BINARY: ${SPARK_CLI_BINARY:-spark-pipelines}',
+        'SPARK_CLI_PROPERTIES_FILE: ${SPARK_CLI_PROPERTIES_FILE:-}',
+        'PIPELINE_RUN_STATE_DIRECTORY: ${PIPELINE_RUN_STATE_DIRECTORY:-/app/run-state}',
         'target: /app/pipelines',
     ]) {
         assert.ok(compose.includes(required), `compose.yaml must contain ${required}`);
     }
     assert.doesNotMatch(compose, /env_file:|secrets:/);
-  assert.doesNotMatch(compose, /SPARK_REMOTE|SPARK_CONNECT_REMOTE|SPARK_API_PROXY_TARGET|SPARK_CLI_SSH/);
+    assert.doesNotMatch(compose, /SPARK_CONNECT_URL|SPARK_REMOTE|SPARK_CONNECT_REMOTE|SPARK_API_PROXY_TARGET|SPARK_CLI_SSH/);
 });
 
-test('local demo starts PostgreSQL, Spark, and SCP with checked-in default-catalog pipelines', async () => {
+test('local demo connects SCP to Standalone and checked-in catalog pipelines', async () => {
     const compose = await fs.readFile(path.join(root, 'compose.dev.yaml'), 'utf8');
     const packageJson = JSON.parse(
         await fs.readFile(path.join(root, 'package.json'), 'utf8'),
@@ -54,28 +55,27 @@ test('local demo starts PostgreSQL, Spark, and SCP with checked-in default-catal
     for (const required of [
         'name: spark-control-plane-demo',
         '  postgres:',
-        '  spark-connect:',
+        '  spark-master:',
+        '  spark-worker:',
         '  control-plane:',
-        'image: apache/spark:4.2.0-python3',
         'CATALOG_BACKEND: spark',
         'AISTOR_WEBHOOK_TOKEN: local-development-only',
         'POSTGRES_HOST: postgres',
-        'SPARK_CONNECT_URL: sc://spark-connect:15002',
+        'SPARK_MASTER_URL: spark://spark-master:7077',
+        'SPARK_DRIVER_HOST: control-plane',
         'source: ./examples/pipelines',
         '127.0.0.1::8080',
-        'spark.sql.catalogImplementation=in-memory',
-        'spark.sql.defaultCatalog=spark_catalog',
     ]) {
         assert.ok(compose.includes(required), `compose.dev.yaml must contain ${required}`);
     }
     assert.doesNotMatch(compose, /\$\{[^}]+:\?/);
     assert.equal(
         packageJson.scripts?.['demo:up'],
-        'docker compose --file compose.dev.yaml up --detach --build --wait && docker compose --file compose.dev.yaml port control-plane 8080',
+        'node docker/start-demo.mjs',
     );
     assert.equal(
         packageJson.scripts?.['demo:down'],
-        'docker compose --file compose.dev.yaml down',
+        'docker compose --file compose.dev.yaml down --remove-orphans',
     );
     assert.match(sqlSpec, /catalog: spark_catalog/);
     assert.match(sqlSpec, /database: default/);
@@ -105,10 +105,7 @@ test('CI and runtime image install Spark from shared pinned requirements', async
         'pyspark[pipelines]==4.2.0',
         'pandas==2.3.3',
         'pyarrow==20.0.0',
-        'grpcio==1.76.0',
-        'grpcio-status==1.76.0',
-        'googleapis-common-protos==1.72.0',
-        'zstandard==0.25.0',
+        'PyYAML==6.0.3',
     ]) {
         assert.ok(requirements.split(/\r?\n/).includes(required));
     }
@@ -124,18 +121,17 @@ test('integration Compose owns pinned PostgreSQL, Polaris, Spark, and control-pl
         path.join(root, 'docker', 'integration', 'spark', 'Dockerfile'),
         'utf8',
     );
-    const sparkStartupScript = await fs.readFile(
-        path.join(root, 'docker', 'integration', 'spark', 'start-connect-server.sh'),
-        'utf8',
-    );
     for (const required of [
         'postgres:16.4-bookworm@sha256:',
         'apache/polaris:1.7.0@sha256:',
         'apache/polaris-admin-tool:1.7.0@sha256:',
         'INTEGRATION_SPARK_IMAGE',
         'polaris-bootstrap:',
-        'spark-connect:',
-        'SPARK_CONNECT_URL: sc://spark-connect:15002',
+        'spark-master:',
+        'spark-worker:',
+        'SPARK_MASTER_URL: spark://spark-master:7077',
+        'SPARK_CLI_PROPERTIES_FILE: /opt/integration/spark-defaults.conf',
+        'INTEGRATION_SPARK_PROPERTIES_PATH',
         'POSTGRES_SSLMODE: disable',
         'condition: service_completed_successfully',
         'INTEGRATION_PIPELINES_PATH',
@@ -147,13 +143,10 @@ test('integration Compose owns pinned PostgreSQL, Polaris, Spark, and control-pl
     assert.match(sparkDockerfile, /^ARG SPARK_BASE_IMAGE$/m);
     assert.match(sparkDockerfile, /^FROM \$\{SPARK_BASE_IMAGE\}$/m);
     assert.doesNotMatch(sparkDockerfile, /^ARG SPARK_BASE_IMAGE=/m);
-    assert.match(sparkStartupScript, /iceberg-spark-runtime-4\.1_2\.13:1\.11\.0/);
-    assert.match(sparkStartupScript, /spark\.sql\.catalogImplementation=in-memory/);
-    assert.match(sparkStartupScript, /spark\.sql\.defaultCatalog=spark_catalog/);
+    assert.match(compose, /org\.apache\.spark\.deploy\.master\.Master/);
+    assert.match(compose, /org\.apache\.spark\.deploy\.worker\.Worker/);
     assert.match(sparkDockerfile, /pandas==2\.3\.3/);
     assert.match(sparkDockerfile, /pyarrow==20\.0\.0/);
-    assert.match(sparkDockerfile, /grpcio==1\.76\.0/);
-    assert.match(sparkDockerfile, /grpcio-status==1\.76\.0/);
     const polarisSeed = await fs.readFile(
         path.join(root, 'tests', 'integration', 'support', 'seed-polaris-integration.mjs'),
         'utf8',
@@ -164,7 +157,8 @@ test('integration Compose owns pinned PostgreSQL, Polaris, Spark, and control-pl
         path.join(root, 'tests', 'integration', 'run-integration-stack.mjs'),
         'utf8',
     );
-    assert.match(integrationRunner, /storage: file:\/\/\/tmp\/spark-control-plane-integration-checkpoints/);
+    assert.match(integrationRunner, /storage: file:\/\/\/spark-shared\/checkpoints\/integration/);
+    assert.match(integrationRunner, /spark\.jars\.packages/);
     assert.doesNotMatch(compose, /:latest(?:\s|$)/);
     assert.doesNotMatch(compose, /env_file:|secrets:/);
 });
@@ -193,8 +187,7 @@ test('Docker healthcheck follows the configured internal port without credential
     assert.match(healthcheck, /CONTROL_PLANE_PORT/);
     assert.match(dockerfile, /org\.opencontainers\.image\.title/);
     assert.match(dockerfile, /org\.opencontainers\.image\.source/);
-    assert.match(dockerfile, /PYSPARK_PYTHON=\/usr\/local\/bin\/python/);
-    assert.match(dockerfile, /PYSPARK_DRIVER_PYTHON=\/usr\/local\/bin\/python/);
+    assert.match(dockerfile, /PYTHON_EXECUTABLE=\/usr\/local\/bin\/python/);
     assert.doesNotMatch(dockerfile, /POSTGRES_PASSWORD|_FILE|secret/i);
 });
 
@@ -207,11 +200,10 @@ test('container runner passes its forced internal port environment to docker run
     assert.match(runner, /'AISTOR_WEBHOOK_TOKEN'/);
     assert.match(runner, /'POSTGRES_PORT'/);
     assert.match(runner, /'POSTGRES_SSLMODE'/);
-    assert.match(runner, /'SPARK_CONNECT_URL'/);
+    assert.match(runner, /'SPARK_MASTER_URL'/);
+    assert.match(runner, /'SPARK_DRIVER_HOST'/);
     assert.match(runner, /'SPARK_CLI_BINARY'/);
-    assert.match(runner, /'SPARK_CLI_PYTHON'/);
     assert.match(runner, /'SPARK_CLI_PROPERTIES_FILE'/);
-    assert.match(runner, /'SPARK_CLI_STATE_DIRECTORY'/);
     assert.match(runner, /PIPELINE_RUN_LEASE_SECONDS:\s*'5'/);
     assert.match(runner, /'SPARK_HISTORY_URL'/);
     assert.doesNotMatch(runner, /SPARK_REMOTE|SPARK_CONNECT_REMOTE|SPARK_API_PROXY_TARGET/);
@@ -228,7 +220,7 @@ test('container acceptance isolates PostgreSQL state in a temporary schema', asy
     assert.match(runner, /POSTGRES_SCHEMA:\s*acceptanceSchema/);
     assert.match(runner, /'--container-postgres-host'/);
     assert.match(runner, /'--container-postgres-port'/);
-    assert.match(runner, /'--container-spark-connect-url'/);
+    assert.match(runner, /'--spark-properties-path'/);
     assert.match(runner, /await dropAcceptanceSchema\(\)/);
     assert.match(runner, /DROP SCHEMA IF EXISTS/);
 });
@@ -261,7 +253,6 @@ test('managed integration tests do not expose test-only environment switches', a
         ['POSTGRES', 'CLEANUP', 'HOST'],
         ['CONTAINER', 'POSTGRES', 'HOST'],
         ['CONTAINER', 'POSTGRES', 'PORT'],
-        ['CONTAINER', 'SPARK', 'CONNECT', 'URL'],
         ['POLARIS', 'ACCEPTANCE'],
         ['POLARIS', 'ACCEPTANCE', 'BASE', 'URL'],
     ].map((parts) => parts.join('_'));
