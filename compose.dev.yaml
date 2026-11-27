@@ -79,7 +79,7 @@ services:
     build:
       context: .
       args:
-        APP_VERSION: 0.1.2
+        APP_VERSION: 0.2.0
         NODE_IMAGE: node:24.19.0-bookworm-slim
         PYTHON_IMAGE: python:3.10.12-slim-bookworm
     image: spark-control-plane:demo

@@ -136,7 +136,7 @@ services:
     build:
       context: .
       args:
-        APP_VERSION: 0.1.2
+        APP_VERSION: 0.2.0
         INTEGRATION_SPARK_VERSION: ${INTEGRATION_SPARK_VERSION:?The integration PySpark version is required}
         JAVA_RUNTIME_IMAGE: ${INTEGRATION_JAVA_RUNTIME_IMAGE:-eclipse-temurin:17-jre-jammy}
         NODE_IMAGE: node:24.19.0-bookworm-slim
